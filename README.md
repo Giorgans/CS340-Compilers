@@ -8,7 +8,7 @@
 ```
 --- Members ---
 Georgios Zervos 3384;
-Stelios Mihelakakis 3524
+Stylianos Michelakakis 3524
 Iasonas Ntagiannis 3540
 ```
 ---------------------------------
