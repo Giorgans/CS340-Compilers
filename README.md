@@ -14,7 +14,7 @@ Iasonas Ntagiannis 3540
 ---------------------------------
 ```
 --- Rules ---
-1)Gamo ton Savvidi
+1)Gamo to skoupidi ton Savvidi
 2)Gia kathe update enimeronoume stin omada sto messenger.
 3)No code from other projects or internet (tha tin pioume).
 ```
