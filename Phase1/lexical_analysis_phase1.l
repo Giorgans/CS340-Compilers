@@ -1,6 +1,8 @@
 %{
-    /** George Zervos 
-     AM: 3384
+    /** George Zervos 3384
+        Stelios Mihelakakis 3524
+	Iasonas Ntiagiannis 3540
+      
      Prog. Languange used for FLEX: C++
  **/
 
@@ -70,7 +72,7 @@ comment     "//".*
 undef       .
 %x BCOMMENT
 
-%option outfile = "lex_an_3384.cpp"
+%option outfile = "lex_an.cpp"
 %option yylineno
 %option noyywrap
 
