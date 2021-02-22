@@ -1,6 +1,11 @@
 # CS340-Compilers
 ---------------------------------
 ```
+--- Useful Info | News  ---
+
+```
+---------------------------------
+```
 --- Members ---
 Georgios Zervos 3384;
 Stelios Mihelakakis 3524
@@ -8,7 +13,10 @@ Iasonas Ntagiannis 3540
 ```
 ---------------------------------
 ```
---- Rulings ---
+--- Rules ---
+1)Gamo ton Savvidi
+2)Gia kathe update enimeronoume stin omada sto messenger.
+3)No code from other projects or internet (tha tin pioume).
 ```
 ---------------------------------
 ```
