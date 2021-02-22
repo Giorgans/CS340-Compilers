@@ -1,10 +1,14 @@
 # CS340-Compilers
 ---------------------------------
 ```
-Members:
+--- Members ---
 Georgios Zervos 3384;
 Stelios Mihelakakis 3524
 Iasonas Ntagiannis 3540
+```
+---------------------------------
+```
+--- Rulings ---
 ```
 ---------------------------------
 ```
