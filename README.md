@@ -1,8 +1,9 @@
 # CS340-Compilers
 ---------------------------------
 ```
---- Useful Info | News  ---
-
+--- TO DO | News  ---
+1)Na oloklirothei to tmima orismwn 
+2)Na ksekinisei to tmima kanonwn me ta vasika plin block comment kai undef!!
 ```
 ---------------------------------
 ```
