@@ -2,8 +2,9 @@
 ---------------------------------
 ```
 --- TO DO | News  ---
-1)Na oloklirothei to tmima orismwn 
-2)Na ksekinisei to tmima kanonwn me ta vasika plin block comment kai undef!!
+1)Sinartiseis gia strings 
+2)recheck nested comments
+3)recheck alphatokent stuff
 ```
 ---------------------------------
 ```
