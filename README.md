@@ -2,9 +2,7 @@
 ---------------------------------
 ```
 --- TO DO | News  ---
-1)Sinartiseis gia strings 
-2)recheck nested comments
-3)recheck alphatokent stuff
+TESTING
 ```
 ---------------------------------
 ```
