@@ -26,3 +26,6 @@ Iasonas Ntagiannis 3540
 3)Gia delete temp arxeiwn(.cpp,lexan_results):make clean
 ```
 ---------------------------------
+```
+--- Phase 2: Syntax Analysis ---
+```
