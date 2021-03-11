@@ -2,7 +2,7 @@
 ---------------------------------
 ```
 --- TO DO | News  ---
-TESTING
+Road to phase 2
 ```
 ---------------------------------
 ```
@@ -22,7 +22,7 @@ Iasonas Ntagiannis 3540
 ```
 --- Phase 1: Lexical Analysis ---
 1)Gia compile: make 
-2)Gia run: ./lexan_results <test_file_name>.txt
-3)Gia delete temp arxeiwn(.cpp,lexan_results): clean
+2)Gia run: ./lexical_analyzer <test_file_name>.txt
+3)Gia delete temp arxeiwn(.cpp,lexan_results):make clean
 ```
 ---------------------------------
