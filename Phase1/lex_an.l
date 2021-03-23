@@ -1,14 +1,16 @@
 %{
+/*** Georgios Zervos AM:3384;
+	 Stylianos Michelakakis AM:3524
+	 Iasonas Filippos Ntagiannis AM:3540 ***/
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <string>
 #include <list>
 #include <stack>
 #include <cctype>
 #define YY_DECL int alpha_yylex (void* yylval)
 using namespace std;
-
-
 
 /* Token struct for lexixal analizer  */
 typedef struct alpha_token_t {
@@ -18,23 +20,8 @@ typedef struct alpha_token_t {
 	string           type; 
 }alpha_token_t;
 
-/*For nested multiline comments*/
-int bcomment_depth = 0;
-stack <int> comment_linespan;
-
-/**/
+/*List of all tokens*/
 list <alpha_token_t> tokens;
-
-/*Fix string esc chars from being printed wrong*/
-void string_print_fix();
-
-/*All token found from lexical analysis exported in a text file*/
-void tokens2file();
-
-
-ofstream lexical_analysis("Lexical_Analysis.txt");
-ofstream Errors("errors.txt");
-
 
 /*Creating new token and returns it*/
 alpha_token_t token(int numline,string content,string description,string type)
@@ -47,11 +34,22 @@ alpha_token_t token(int numline,string content,string description,string type)
     return temp_token;
 }
 
-string token2string(string content, string type);
+/*For multiline/nested comments*/
+int bcomment_depth = 0;
+stack <int> comment_linespan;
 
-void StringAnalyse(string text,int strline);
+/*All token found from lexical analysis exported in a text file*/
+void tokens2file();
 
+/*Saving the results of tokens and errors in text files*/
+ofstream lexical_analysis("Lexical_Analysis.txt");
+ofstream Errors("errors.txt");
 
+/*Saving all tokens in a text file*/
+string token2string(string content,int line,string type);
+
+/*Fixing the strings with escape characters*/
+string String_Esc_Fix(string content,int line);
 
 %}
 
@@ -66,27 +64,30 @@ delimiter       [\n\r \t\v]+
 single_line_comment  "//".*
 multi_line_comment_open  "/*" 
 multi_line_comment_close "*/"
+undefined .
 %x COMMENT
-
-
 
 %option outfile = "lexical_analyzer.cpp"
 %option yylineno
 %option noyywrap
 
-
-
 %%
-{keyword}		{tokens.push_back(token(yylineno,yytext,"enumerated","KEYWORD"));}
-{operator}      {tokens.push_back(token(yylineno,yytext,"enumerated","OPERATOR"));}
-{integer}       {tokens.push_back(token(yylineno,yytext,"char*","INTCONST"));}
-{real}	        {tokens.push_back(token(yylineno,yytext,"integer","REALCONST"));}
-{string}        {tokens.push_back(token(yylineno,yytext,"real","STRING"));}
-{punctuator}    {tokens.push_back(token(yylineno,yytext,"enumerated","PUNCTUATOR"));}
-{id}	     	{tokens.push_back(token(yylineno,yytext,"enumerated","ID"));}
+{keyword}		{tokens.push_back(token(yylineno,yytext,"\t<---enumerated","KEYWORD"));}
+{operator}      {tokens.push_back(token(yylineno,yytext,"\t<---enumerated","OPERATOR"));}
+{integer}       {tokens.push_back(token(yylineno,yytext,"\t<---integer","INTCONST"));}
+{real}	        {tokens.push_back(token(yylineno,yytext,"\t<---real","REALCONST"));}
+{string}        {tokens.push_back(token(yylineno,yytext,"\t<---char*","STRING"));}
+{punctuator}    {tokens.push_back(token(yylineno,yytext,"\t<---enumerated","PUNCTUATOR"));}
+{id}	     	{tokens.push_back(token(yylineno,yytext,"\t<---char*","ID"));}
 {delimiter}			{}
-. 				{Errors<<" Undefined character "<< yytext <<" Found At Line: "<< yylineno<<endl;}
-{single_line_comment} {tokens.push_back(token(yylineno,"","enumerated","LINE COMMENT"));}
+{undefined}		{
+	string undef; stringstream temp; temp << yytext; temp >> undef;
+    if(!undef.compare("\""))
+		Errors << "Error: String that starts in line " + to_string(yylineno) + " isn't closed!\n"; 
+    else 
+		Errors << "Undefined input \"" + undef +  "\" in line " + to_string(yylineno) + "\n";       
+}
+{single_line_comment} {tokens.push_back(token(yylineno,"","\tLINE_COMMENT\t<---enumerated","COMMENT"));}
 {multi_line_comment_open} {
 	bcomment_depth++;
 	comment_linespan.push(yylineno);
@@ -107,46 +108,41 @@ multi_line_comment_close "*/"
 	
 	if(bcomment_depth>1)  {
 		bcomment_depth--;
-		tokens.push_back(token(yylineno,lines,"enumerated","NESTED COMMENT"));
+		tokens.push_back(token(yylineno,lines,"\tNESTED_COMMENT\t<---enumerated","COMMENT"));
 	}
 	else {
 		bcomment_depth--;
-		tokens.push_back(token(yylineno,lines,"enumerated","MULTILINE COMMENT"));
+		tokens.push_back(token(yylineno,lines,"\tMULTILINE_COMMENT\t<---enumerated","COMMENT"));
 		BEGIN(INITIAL);
 	}
-
 }
-
 <COMMENT>. {}
 <COMMENT>{delimiter} {}
-<COMMENT><<EOF>> {Errors << "Block comment is not closed " <<endl; BEGIN(INITIAL);}
-
-
-
+<COMMENT><<EOF>> {Errors << "Block comment that started in line: " << to_string(comment_linespan.top()) << " is not closed " <<endl; BEGIN(INITIAL);}
 
 %%
-
+/*Saving all tokens in a text file*/
 void tokens2file(){
    int tokennum=0;
    list <alpha_token_t>::iterator  token;
    for(token = tokens.begin() ; token!=tokens.end() ; token++){
-	   if(!token->type.compare("STRING")) {	
-			lexical_analysis <<  token->numline << ":\t#"<< ++tokennum <<  "\t" << token->content  << "\t" << token->type  << "\t" ;
- 			StringAnalyse(token->content,token->numline);
-			lexical_analysis << "\t<---" << token->description << "\n";
-	   }
-	   else
-	   		lexical_analysis <<  token->numline << ":\t#"<< ++tokennum <<  "\t" << "\""  << token->content << "\""  << "\t" << token->type  << "\t" << token2string(token->content,token->type)  << "\t<---"  << token->description << "\n";
+	   	lexical_analysis <<  token->numline << ":\t#"<< ++tokennum <<"\t" ;
+		if(token->type.compare("STRING")) lexical_analysis << "\""  ;
+    	lexical_analysis << token->content ;
+		if(token->type.compare("STRING")) lexical_analysis << "\""  ;
+		lexical_analysis << "\t" << token->type  << "\t" << token2string(token->content,token->numline,token->type) << "\t" << token->description << "\n";
    }
-
-
-
 }
 
-string token2string(string content, string type){
-	
+/*Returns the string description of some type of tokens*/
+string token2string(string content,int line,string type){
+	/*Strings for IDs stay indentical*/
+	if(!type.compare("ID")) return content;
+	/*Strings with Escape characters needs to be fixed*/
+	else if(!type.compare("STRING")) return String_Esc_Fix(content,line); 
+	else if(!type.compare("COMMENT")) return "";
 	/*Strings for operators*/
-    if(!content.compare("=")) return "ASSIGN";
+    else if(!content.compare("=")) return "ASSIGN";
     else if(!content.compare("+")) return "PLUS";
     else if(!content.compare("-")) return "MINUS";
     else if(!content.compare("*")) return "MULTIPLY";
@@ -173,46 +169,37 @@ string token2string(string content, string type){
     else if(!content.compare("::")) return "DOUBLE_COLON";
     else if(!content.compare(".")) return "DOT";
     else if(!content.compare("..")) return "DOUBLE_DOT";
-./
-	else if(!type.compare("ID")){
-		return content;
-	}
-	
+	/*Other stuff like keywords getting in Capital Letters*/
 	else {
-		for(int i=0; i<content.size(); i++){
+		for(int i=0; i<content.size(); i++)
 			content.at(i) = toupper(content.at(i));
-		}
 		return content;
 	}
 }
 
 /*Analyses a string to find possible escape characters*/
-void StringAnalyse(string text,int strline){
-    for(int i=0 ; i<text.size() ; i++){
-        if(text[i]=='\\' && text[i+1]=='n'){ i++; lexical_analysis << "\n"; }
-        else if(text[i]=='\\' && text[i+1]=='t'){ i++; lexical_analysis << "\t"; }
-        else if(text[i]=='\\' && text[i+1]=='r'){ i++; lexical_analysis << "\r"; }
-        else if(text[i]=='\\' && text[i+1]=='v'){ i++; lexical_analysis << "\v"; }
-        else if(text[i]=='\\' && text[i+1]=='r'){ i++; lexical_analysis << "\r"; }
-        else if(text[i]=='\\' && text[i+1]=='f'){ i++; lexical_analysis << "\f"; }
-        else if(text[i]=='\\' && text[i+1]=='e'){ i++; lexical_analysis << "\e"; }
-        else if(text[i]=='\\' && text[i+1]=='b'){ i++; lexical_analysis << "\b"; }
-        else if(text[i]=='\\' && text[i+1]=='\"'){ i++; lexical_analysis << "\""; }
-        else if(text[i]=='\\' && text[i+1]=='\''){ i++; lexical_analysis << "\'"; }
-        else if(text[i]=='\\' && text[i+1]=='\\'){ i++; lexical_analysis << "\\"; }
-        else if(text[i]=='\\' && text[i+1]=='\"' && text[i+2]=='\0'){
-            Errors << "Error: String is not closed in line " + to_string(strline) + "\n"; 
-            i+=2; 
-        }
-        else if(text[i]=='\\' && text[i+1]!=' '){
-            Errors << "Warning: Illegal escape char in line " + to_string(strline) + "\n"; 
-            i++; 
-        }
-        else lexical_analysis << text[i];  
+string String_Esc_Fix(string content,int line){ 
+	string temp;
+	for(int i=0 ; i<content.size() ; i++){
+        if(content[i]=='\\' && content[i+1]=='n'){ i++; temp +=  "\n"; }
+        else if(content[i]=='\\' && content[i+1]=='t'){ i++; temp +=  "\t"; }
+        else if(content[i]=='\\' && content[i+1]=='r'){ i++; temp +=  "\r"; }
+        else if(content[i]=='\\' && content[i+1]=='v'){ i++; temp +=  "\v"; }
+        else if(content[i]=='\\' && content[i+1]=='r'){ i++; temp +=  "\r"; }
+        else if(content[i]=='\\' && content[i+1]=='f'){ i++; temp +=  "\f"; }
+        else if(content[i]=='\\' && content[i+1]=='e'){ i++; temp +=  "\e"; }
+        else if(content[i]=='\\' && content[i+1]=='b'){ i++; temp +=  "\b"; }
+        else if(content[i]=='\\' && content[i+1]=='\"'){ i++; temp +=  "\""; }
+        else if(content[i]=='\\' && content[i+1]=='\''){ i++; temp +=  "\'"; }
+        else if(content[i]=='\\' && content[i+1]=='\\'){ i++; temp +=  "\\"; }
+        else if(content[i]=='\\' && content[i+1]=='\"' && content[i+2]=='\0'){
+			Errors << "Error: String that starts in line " + to_string(yylineno) + " isn't closed!\n"; i+=2; }
+        else if(content[i]=='\\' && content[i+1]!=' '){
+        	Errors << "Warning: Illegal escape char " << content[i+1] << " in line " + to_string(line) + "\n"; i++; }
+        else temp += content[i];  
     }
+	return temp;
 }
-
-
 
 int main(int argc, char **argv) 
 {
@@ -226,13 +213,13 @@ int main(int argc, char **argv)
 		printf("Enter text here:\n");
 		yyin = stdin;
 	} 
-	lexical_analysis <<  "\n----------------------    Lexical analysis    ----------------------\n" ;
-	Errors <<  "\n----------------  Errors/Warnings  ----------------\n" ;
-
+	lexical_analysis <<  "\n-----------------------    Lexical Analysis    -----------------------\n" ;
+	Errors <<  "\n----------------  Errors|Warnings|Undefined  ----------------\n" ;
 	alpha_yylex(NULL);
 	tokens2file();
+	lexical_analysis <<  "----------------------------------------------------------------------" ;
+	Errors <<  "-------------------------------------------------------------" ;
 
 	Errors.close();
-
-
+	lexical_analysis.close();
 }

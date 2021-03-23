@@ -3,14 +3,14 @@ FL=flex
 OF= -o
 REM=rm -f
 
-all:	lex_an.cpp 
-	$(CPP) -std=c++11 $(OF)  lexan_results lex_an.cpp
+all: lexical_analyzer.cpp 
+	$(CPP) $(OF) lexical_analyzer lexical_analyzer.cpp
 
 
-lex_an.cpp:	lexical_analysis_phase1.l 
-	$(FL) lexical_analysis_phase1.l 
+lexical_analyzer.cpp: lex_an.l 
+	$(FL) lex_an.l 
 
-clean:	lexan_results lex_an.cpp
-	$(REM) lexan_results lex_an.cpp
+clean:	lexical_analyzer lexical_analyzer.cpp errors.txt Lexical_Analysis.txt
+	$(REM) lexical_analyzer lexical_analyzer.cpp errors.txt Lexical_Analysis.txt
 
 	
