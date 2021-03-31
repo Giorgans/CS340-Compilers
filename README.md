@@ -2,7 +2,9 @@
 ---------------------------------
 ```
 --- TO DO | News  ---
-Road to phase 2
+George: Symbol table 
+Stelios: Grammar rules 
+Dajohn: Test and debug rules & conflicts
 ```
 ---------------------------------
 ```
