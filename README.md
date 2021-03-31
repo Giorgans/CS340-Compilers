@@ -34,4 +34,7 @@ Iasonas Ntagiannis 3540
 ---------------------------------
 ```
 --- Phase 2: Syntax Analysis ---
+1)bison compile: bison syntax_analysis.y
+2)compile to .cpp arxeio p exei paraxthei 
+3)./ gia run
 ```
