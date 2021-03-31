@@ -2,7 +2,7 @@
 ---------------------------------
 ```
 --- TO DO | News  ---
-LEX FILE: DONE
+LEX FILE UPDATE: DONE
 YACC FILE BASIC STRUCTURE: DONE
 SYMBOL TABLE BASIC STRUCURE: DONE
 REST:
