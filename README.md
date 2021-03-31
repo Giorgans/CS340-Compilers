@@ -2,6 +2,10 @@
 ---------------------------------
 ```
 --- TO DO | News  ---
+LEX FILE: DONE
+YACC BASIC STRUCTURE: DONE
+SYMBOL TABLE BASIC STRUCURE: DONE
+REST:
 George: Symbol table 
 Stelios: Grammar rules 
 Dajohn: Test and debug rules & conflicts
