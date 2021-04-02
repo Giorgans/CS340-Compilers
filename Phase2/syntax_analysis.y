@@ -31,6 +31,7 @@ extern FILE *yyin;
     int intValue; 
     double realValue;
 }
+
 %token <stringValue> ID
 %token <intValue> INTCONST
 %token <realValue> REALCONST
@@ -53,20 +54,21 @@ extern FILE *yyin;
 %left LEFT_PARENTHESIS RIGHT_PARENTHESIS
 
 %%
-program: program stat {}
+program: program stmt {}
          | 
          ;
-stat: exp SEMICOLON {}
-      | if_stat {}
-      | while_stat {}
-      | for_stat {}
-      | ret_stat {}
+stmt: exp SEMICOLON {}
+      | if_stmt {}
+      | while_stmt {}
+      | for_stmt {}
+      | ret_stmt {}
       | BREAK SEMICOLON {}
       | CONTINUE SEMICOLON {}
+      | block {}
       | f_def {}
-      | SEMICOLON
+      | SEMICOLON {}
       ;
-exp: ass_exp {}
+exp: assign_exp {}
     | exp PLUS exp {}
     | exp MINUS exp {}
     | exp MULTIPLY exp {}
@@ -88,11 +90,11 @@ term: LEFT_PARENTHESIS exp RIGHT_PARENTHESIS {}
     | INCREMENT lvalue {}
     | lvalue INCREMENT {}
     | DECREMENT lvalue {}
-    | prim {}
+    | primary {}
     ;
-ass_exp: lvalue ASSIGN exp {}
+assign_exp: lvalue ASSIGN exp {}
     ;
-prim: lvalue {}
+primary: lvalue {}
     | call {}
     | obj_def {}
     | LEFT_PARENTHESIS f_def RIGHT_PARENTHESIS {}
@@ -101,9 +103,9 @@ prim: lvalue {}
 lvalue: ID {}
     |   LOCAL ID {}
     |   DOUBLE_COLON ID {}
-    |   mem {}
+    |   member {}
     ;
-mem:  lvalue DOT ID {}
+member:  lvalue DOT ID {}
     | lvalue LEFT_BRACKET exp RIGHT_BRACKET {}
     | call DOT ID {}
     | call LEFT_BRACKET exp RIGHT_BRACKET {}
@@ -120,7 +122,7 @@ normcall: LEFT_PARENTHESIS elist RIGHT_PARENTHESIS {}
     ;
 methodcall: DOUBLE_DOT ID LEFT_PARENTHESIS elist RIGHT_PARENTHESIS {}
     ;
-elist: exp {}
+elist: exp {} 
     |  elist COMMA exp {}
     | {}
     ;
@@ -129,16 +131,18 @@ obj_def: LEFT_BRACKET elist RIGHT_BRACKET {}
     ;
 indexed: index_el {}
     | indexed COMMA index_el {}
+    | {}
     ;
 index_el: LEFT_BRACE exp COLON exp RIGHT_BRACE {}
     ;
-block: LEFT_BRACE {} stats RIGHT_BRACE {}
+block: LEFT_BRACE {} stmts* RIGHT_BRACE {}
     ;
-stats: stats stat {} 
+stmts: stmts stmt {} 
     | {}
     ;
 f_def: FUNCTION ID {} LEFT_PARENTHESIS {} idlist {} RIGHT_PARENTHESIS {}
     |  FUNCTION {} LEFT_PARENTHESIS {} idlist {} RIGHT_PARENTHESIS
+    | 
     ;
 const: INTCONST {}
     |  REALCONST {}
@@ -151,14 +155,14 @@ idlist: ID{}
     | ID COMMA ID {}
     | {}
     ;
-if_stat: IF LEFT_PARENTHESIS exp RIGHT_PARENTHESIS stat {}
-    | IF LEFT_PARENTHESIS exp RIGHT_PARENTHESIS stat ELSE stat {}
+if_stmt: IF LEFT_PARENTHESIS exp RIGHT_PARENTHESIS stmt {}
+    | IF LEFT_PARENTHESIS exp RIGHT_PARENTHESIS stmt ELSE stmt {}
     ;
-while_stat: WHILE LEFT_PARENTHESIS exp RIGHT_PARENTHESIS stat {}
+while_stmt: WHILE LEFT_PARENTHESIS exp RIGHT_PARENTHESIS stmt {}
     ;
-for_stat: FOR LEFT_PARENTHESIS elist SEMICOLON exp SEMICOLON elist RIGHT_PARENTHESIS stat {}
+for_stmt: FOR LEFT_PARENTHESIS elist SEMICOLON exp SEMICOLON elist RIGHT_PARENTHESIS stmt {}
     ;
-ret_stat: RETURN SEMICOLON {}
+ret_stmt: RETURN SEMICOLON {}
     | RETURN exp SEMICOLON {}
     ;
 
