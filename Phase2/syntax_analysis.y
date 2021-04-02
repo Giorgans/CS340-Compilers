@@ -16,6 +16,8 @@ using namespace std;
 int yyerror(const char *yaccProvidedMessage);
 int yylex(void);
 
+int couterscope = 0;
+
 extern int yylineno;
 extern char *yytext; 
 extern FILE *yyin;
@@ -63,6 +65,7 @@ stat: exp SEMICOLON {}
       | ret_stat {}
       | BREAK SEMICOLON {}
       | CONTINUE SEMICOLON {}
+      | block {}
       | f_def {}
       | SEMICOLON
       ;
@@ -88,6 +91,7 @@ term: LEFT_PARENTHESIS exp RIGHT_PARENTHESIS {}
     | INCREMENT lvalue {}
     | lvalue INCREMENT {}
     | DECREMENT lvalue {}
+    | lvalue DECREMENT {}
     | prim {}
     ;
 ass_exp: lvalue ASSIGN exp {}
@@ -130,7 +134,7 @@ obj_def: LEFT_BRACKET elist RIGHT_BRACKET {}
 indexed: index_el {}
     | indexed COMMA index_el {}
     ;
-index_el: LEFT_BRACE exp COLON exp RIGHT_BRACE {}
+index_el: LEFT_BRACE exp COLON exp RIGHT_BRACE {/*LOOK IT UP*/}
     ;
 block: LEFT_BRACE {} stats RIGHT_BRACE {}
     ;
