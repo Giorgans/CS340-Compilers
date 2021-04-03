@@ -34,7 +34,7 @@ Iasonas Ntagiannis 3540
 ---------------------------------
 ```
 --- Phase 2: Syntax Analysis ---
-1)bison compile: bison syntax_analysis.y
-2)compile to .cpp arxeio p exei paraxthei 
-3)./ gia run
+1)Gia compile: make 
+2)Gia run: ./syntax_analyzer <test_file_name>.txt 
+3)Gia delete temp arxeiwn(.cpp,.output,syntax_analyzer):make clean
 ```
