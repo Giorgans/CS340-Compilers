@@ -7,9 +7,12 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <string.h>
+
 #include <cctype>
 #include <stdlib.h>
 #include "parser.h"
+
 using namespace std;
 
 /*For multiline/nested comments*/
@@ -74,7 +77,7 @@ undefined .
 }
 {integer}       { yylval.intValue = atoi(yytext);    return INTCONST;}
 {real}	        { yylval.realValue = atof(yytext);   return REALCONST;}
-{string}        { yylval.stringValue.assign(yytext); return STRING;}
+{string}        { yylval.stringValue =strdup(yytext);  return STRING;}
 {punctuator}    {
     string text = yytext;
     if(!text.compare("{")) return LEFT_BRACE;
@@ -91,7 +94,7 @@ undefined .
     if(!text.compare("..")) return DOUBLE_DOT;
 
 }
-{id}	     	{ yylval.stringValue.assign(yytext);   return ID;}
+{id}	     	{ yylval.stringValue =strdup(yytext);  return ID;}
 {delimiter}		{}
 {undefined}		{
 	string undef; stringstream temp; temp << yytext; temp >> undef;
