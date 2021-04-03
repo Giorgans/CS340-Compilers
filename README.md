@@ -4,9 +4,9 @@
 --- TO DO | News  ---
 LEX FILE UPDATE: DONE
 YACC FILE BASIC STRUCTURE: DONE
-SYMBOL TABLE BASIC STRUCURE: DONE
+SYMBOL TABLE : DONE
 REST:
-George: Symbol table 
+George: add things from yacc to symbol table  
 Stelios: Grammar rules 
 Dajohn: Test and debug rules & conflicts
 ```
