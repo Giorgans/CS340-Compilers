@@ -6,7 +6,7 @@ LEX FILE UPDATE: DONE
 YACC FILE BASIC STRUCTURE: DONE
 SYMBOL TABLE : DONE
 REST:
-George: add things from yacc to symbol table  
+George: add things to rules symbol table related
 Stelios: Grammar rules 
 Dajohn: Test and debug rules & conflicts
 ```
