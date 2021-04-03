@@ -1,3 +1,7 @@
+/*** ---SYMBOL TABLE HEADER FILE---
+     Georgios Zervos AM:3384;
+	 Stylianos Michelakakis AM:3524
+	 Iasonas Filippos Ntagiannis AM:3540 ***/
 #include <iostream>
 #include <list>
 #include <string>
@@ -68,6 +72,7 @@ typedef class SymbolTableEntry {
         }
 
 } SymbolTableEntry;
+ 
 
 typedef class ScopeLists {
     private:
@@ -85,9 +90,9 @@ typedef class ScopeLists {
 typedef class SymbolTable {
     private:
         list <SymbolTableEntry> *HashTable[BUCKETS];
-        list <ScopeLists> scopelists;
         unsigned int hash(string name);
     public:
+        list <ScopeLists> scopelists;
         void Insert(string name,enum SymbolType type,unsigned int scope,unsigned int line);
         SymbolTableEntry* Lookup(string name); 
         SymbolTableEntry* LookupScope(string name,unsigned int scope);

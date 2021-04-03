@@ -29,7 +29,7 @@ bool func_open=false;
 %start program
 %error-verbose
  
-%expect 1
+%expect 0
 
 %union {
     char *stringValue; 
@@ -60,42 +60,42 @@ bool func_open=false;
 %left DOT DOUBLE_DOT
 %left LEFT_BRACKET RIGHT_BRACKET
 %left LEFT_PARENTHESIS RIGHT_PARENTHESIS
-
+%right THEN ELSE
 %%
 
-program: stmts {}
+program: stmts {cout<<"\nPROGRAM START";}
         ;
-stmt:  exp SEMICOLON {}
-      | if_stmt {}
-      | while_stmt {}
-      | for_stmt {}
-      | ret_stmt {}
-      | BREAK SEMICOLON {}
-      | CONTINUE SEMICOLON {}
-      | block {}
-      | f_def {}
-      | SEMICOLON {}
+stmt:  exp SEMICOLON {cout<<"exp;";}
+      | if_stmt {cout<<"if(expr)stmt";}
+      | while_stmt {cout<<"while(expr)stmt";}
+      | for_stmt {cout<<"for(elist;expr;elist;)stmt"<<endl;}
+      | ret_stmt {cout<<"return ; OR expr;";}
+      | BREAK SEMICOLON {cout<<"break;";}
+      | CONTINUE SEMICOLON {cout<<"continue;";}
+      | block {cout<<"{}";}
+      | f_def {cout<<"function def";}
+      | SEMICOLON {cout<< ";";}
       ;
 stmts: stmts stmt {}
     | {}
     ;
-exp: assign_exp {}
-    | exp PLUS exp {}
-    | exp MINUS exp {}
-    | exp MULTIPLY exp {}
-    | exp DIV exp {}
-    | exp MOD exp {}
-    | exp LESS_THAN exp {}
-    | exp GREATER_THAN exp {}
-    | exp LESS_EQUAL exp {}
-    | exp GREATER_EQUAL exp {}
-    | exp AND exp {}
-    | exp OR exp {}
-    | exp EQUAL exp {}
-    | exp NOT_EQUAL exp {}
+exp: assign_exp {cout<<"=";}
+    | exp PLUS exp {cout<<"+";}
+    | exp MINUS exp {cout<<"-";}
+    | exp MULTIPLY exp {cout<<"*"<<endl;}
+    | exp DIV exp {cout<<"/"<<endl;}
+    | exp MOD exp {cout<<"%"<<endl;}
+    | exp LESS_THAN exp {cout<<"<"<<endl;}
+    | exp GREATER_THAN exp {cout<<">"<<endl;}
+    | exp LESS_EQUAL exp {cout<<"<="<<endl;}
+    | exp GREATER_EQUAL exp {cout<<">="<<endl;}
+    | exp AND exp {cout<<"&&";}
+    | exp OR exp {cout<<"||";}
+    | exp EQUAL exp {cout<<"==";}
+    | exp NOT_EQUAL exp {cout<<"!=";}
     | term {}
     ;
-term: LEFT_PARENTHESIS exp RIGHT_PARENTHESIS {}
+term: LEFT_PARENTHESIS {} exp RIGHT_PARENTHESIS {}
     | MINUS exp %prec UMINUS {}
     | NOT exp {}
     | PLUS_PLUS lvalue {}
@@ -109,10 +109,11 @@ assign_exp: lvalue ASSIGN exp {}
 primary: lvalue {}
     | call {}
     | obj_def {}
-    | LEFT_PARENTHESIS f_def RIGHT_PARENTHESIS {}
+    | LEFT_PARENTHESIS f_def RIGHT_PARENTHESIS
     | const {}
     ;
 lvalue: ID {
+            cout << "************ID FOUND**********" << endl;
             SymbolTableEntry *symbol = table.Lookup($1),*temp;
             bool found = false;
 
@@ -143,16 +144,16 @@ member:  lvalue DOT ID {}
     | call LEFT_BRACKET exp RIGHT_BRACKET {}
     ;
 call: call LEFT_PARENTHESIS elist RIGHT_PARENTHESIS {}
-    | lvalue callsuffix {}
-    | LEFT_PARENTHESIS f_def RIGHT_PARENTHESIS LEFT_PARENTHESIS elist RIGHT_PARENTHESIS {}
+    | lvalue callsuffix {cout<<"Vghkene to call mre";}
+    | LEFT_PARENTHESIS f_def RIGHT_PARENTHESIS LEFT_PARENTHESIS elist RIGHT_PARENTHESIS {cout<<"\n found this shitty call";}
     ; 
    
 callsuffix: normcall {}
     | methodcall {}
     ;
-normcall: LEFT_PARENTHESIS elist RIGHT_PARENTHESIS {}
+normcall: LEFT_PARENTHESIS{scope++;} elist RIGHT_PARENTHESIS {scope--;}
     ;
-methodcall: DOUBLE_DOT ID LEFT_PARENTHESIS elist RIGHT_PARENTHESIS {}
+methodcall: DOUBLE_DOT ID LEFT_PARENTHESIS{scope++;} elist RIGHT_PARENTHESIS {scope--;}
     ;
 
 elist: exp {}
@@ -166,26 +167,18 @@ obj_def:  LEFT_BRACKET indexed RIGHT_BRACKET {}
 indexed: index_el {} 
     |indexed COMMA index_el {}
     ;
-index_el: LEFT_BRACE exp COLON exp RIGHT_BRACE {}
+index_el: LEFT_BRACE{scope++;} exp COLON exp RIGHT_BRACE {scope--;}
     ;
-block: LEFT_BRACE {} stmts RIGHT_BRACE {}
+block: LEFT_BRACE {scope++;} stmts RIGHT_BRACE {scope--;}
     ;
 
 f_def: FUNCTION ID{
-            SymbolTableEntry *symbol = table.Lookup($2);
-            SymbolTableEntry *temp = table.LookupScope($2,0);
-            bool found = false;
 
-            if(symbol!=NULL){
-
-            }
-            
-    
-       }
+        }
         LEFT_PARENTHESIS {scope++;} 
-        idlist RIGHT_PARENTHESIS {scope--;} {func_open=true;} 
-        block {} {func_open=false;}
-    |  FUNCTION LEFT_PARENTHESIS {scope++;} idlist RIGHT_PARENTHESIS {scope--;}{func_open=true;}  block {}  {func_open=false;}
+        idlist RIGHT_PARENTHESIS  {func_open=true;} 
+        block {scope--;} {func_open=false;}
+    |  FUNCTION LEFT_PARENTHESIS {scope++;} idlist RIGHT_PARENTHESIS {func_open=true;}  block {scope--;}  {func_open=false;}
     ;
 const: INTCONST {}
     |  REALCONST {}
@@ -198,8 +191,8 @@ idlist: ID{}
     | idlist COMMA ID {}
     | {}
     ;
-if_stmt: IF LEFT_PARENTHESIS exp RIGHT_PARENTHESIS stmt
-    | if_stmt ELSE stmt{}
+if_stmt: IF LEFT_PARENTHESIS exp RIGHT_PARENTHESIS stmt {}
+    | IF LEFT_PARENTHESIS exp RIGHT_PARENTHESIS stmt ELSE stmt{}
     ;
 while_stmt: WHILE LEFT_PARENTHESIS exp RIGHT_PARENTHESIS stmt {}
     ;
@@ -209,6 +202,25 @@ ret_stmt: RETURN SEMICOLON {}
     | RETURN exp SEMICOLON {}
     ;
 %%
+
+void printSymbols(){
+    list<ScopeLists>::iterator i;
+    list<SymbolTableEntry>::iterator j;
+
+    for (i = table.scopelists.begin() ; i != table.scopelists.end() ; i++){
+        cout << "\n---------- Scope   #" << i->getScope() << "  ----------" << endl;
+        for (j = i->S_list->begin() ; j != i->S_list->end() ; j++){
+            cout <<"\"" << j->getVar()->getName()<<"\"" << "\t"  ;
+            if(j->getType()==LIBFUNC) cout << "[library function]\t";
+            else if(j->getType()==USERFUNC) cout << "[user function]\t";
+            else if(j->getType()==GLOBAL) cout << "[global variable]\t";
+            else if(j->getType()==LOCALV) cout << "[local variable]\t";
+            else cout << "[formal argument]\t";
+            cout << "(line " << j->getVar()->getLine() << ")\t" ;
+            cout << "(scope " << j->getVar()->getScope() << ")\t"<< endl ;
+        }
+    }
+ }
 
 
 int yyerror(const char* yaccProvidedMessage){
@@ -227,6 +239,7 @@ int main(int argc, char **argv) {
   else yyin = stdin;    
 
   yyparse();
-    
+  printSymbols();
+
   return 0; 
 }

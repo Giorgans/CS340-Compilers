@@ -19,6 +19,6 @@ lexical_analyzer.cpp:	lex_an_v2.l
 syntax_analyzer.cpp:	syntax_an.y
 	$(BS) $(BSFLAGS)  syntax_an.y
 
-clean:  syntax_analyzer.cpp lexical_analyzer.cpp parser.h syntax_analyzer.output syntax_analyzer
-	$(REM)   syntax_analyzer.cpp lexical_analyzer.cpp parser.h syntax_analyzer.output syntax_analyzer
+clean:  syntax_analyzer.cpp lexical_analyzer.cpp parser.h syntax_analyzer.output 
+	$(REM)   syntax_analyzer.cpp lexical_analyzer.cpp parser.h syntax_analyzer.output 
 

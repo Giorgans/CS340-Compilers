@@ -1,3 +1,7 @@
+/*** ---SYMBOL TABLE C++ FILE---
+     Georgios Zervos AM:3384;
+	 Stylianos Michelakakis AM:3524
+	 Iasonas Filippos Ntagiannis AM:3540 ***/
 #include "SymbolTable.h"
 
 void SymbolTable::Insert(string name,enum SymbolType type,
@@ -20,8 +24,26 @@ void SymbolTable::Insert(string name,enum SymbolType type,
         }
     }
 
-    if(!scopefound) 
-        scopelists.push_back(*(new ScopeLists(scope,newSymbol)));
+    if(!scopefound) {
+
+        list<ScopeLists>::iterator current,next=scopelists.begin();
+        if(scopelists.empty())
+            scopelists.push_back(*(new ScopeLists(scope,newSymbol)));
+        else{
+            next++;
+            for(current=scopelists.begin(); current!=scopelists.end(); current++){
+                if(current->getScope()<scope && next==scopelists.end()){ 
+                    scopelists.push_back(*(new ScopeLists(scope,newSymbol)));
+                    break;
+                }
+                else if(current->getScope()<scope && next->getScope()>scope){
+                    scopelists.insert(next,*(new ScopeLists(scope,newSymbol)));
+                    break;
+                }
+                next++;
+            }       
+        }
+    }
 }
 
 SymbolTableEntry *SymbolTable::Lookup(string name){
