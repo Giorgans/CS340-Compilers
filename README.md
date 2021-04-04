@@ -6,8 +6,8 @@ LEX FILE UPDATE: DONE
 SYMBOL TABLE : DONE
 GRAMMAR: DONE 
 ERRORS: 1) FUNCTION --,++ : DONE 
-        2) overshadowing 
-        3) redefinition 
+        2) overshadowing  : DONE 
+        3) redefinition   : DONE
 TO DO:
 ERRORS: return error 
 ```
