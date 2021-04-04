@@ -3,12 +3,13 @@
 ```
 --- TO DO | News  ---
 LEX FILE UPDATE: DONE
-YACC FILE BASIC STRUCTURE: DONE
 SYMBOL TABLE : DONE
-REST:
-George: add things to rules symbol table related
-Stelios: Grammar rules 
-Dajohn: Test and debug rules & conflicts
+GRAMMAR: DONE 
+ERRORS: 1) FUNCTION --,++ : DONE 
+        2) overshadowing 
+        3) redefinition 
+TO DO:
+ERRORS: return error 
 ```
 ---------------------------------
 ```
