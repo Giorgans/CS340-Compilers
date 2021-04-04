@@ -4,6 +4,8 @@
 	 Iasonas Filippos Ntagiannis AM:3540 ***/
 #include "SymbolTable.h"
 
+/*** Creates a new symbol and stores its address 
+ *   to the HashTable and the list for each scope **/
 void SymbolTable::Insert(string name,enum SymbolType type,
                                         unsigned int scope,
                                         unsigned int line){
@@ -46,6 +48,8 @@ void SymbolTable::Insert(string name,enum SymbolType type,
     }
 }
 
+/** Searching through the HashTable and returns the address
+  * of the symbol were searching, NULL otherwise.  */
 SymbolTableEntry *SymbolTable::Lookup(string name){
     unsigned int index = hash(name);
     list<SymbolTableEntry>::iterator i;
@@ -56,6 +60,8 @@ SymbolTableEntry *SymbolTable::Lookup(string name){
     return NULL;
 }
 
+/* Searching through the Scope Lists and returns, the address
+    of the symbol were searching for a specific scope,NULL otherwise. */
 SymbolTableEntry *SymbolTable::LookupScope(string name,unsigned int scope){
     list<ScopeLists>::iterator i;
     list<SymbolTableEntry>::iterator j;
@@ -71,17 +77,22 @@ SymbolTableEntry *SymbolTable::LookupScope(string name,unsigned int scope){
     return NULL;
 }
 
+/** Turning all active symbols on a specific scope , inactive */
 void SymbolTable::Hide(unsigned int scope){
     list<ScopeLists>::iterator i;
     list<SymbolTableEntry>::iterator j;
     for (i=scopelists.begin() ; i!=scopelists.end() ; i++){
         if(i->getScope()==scope) { 
             for (j = i->S_list->begin() ; j != i->S_list->end() ; j++)
-                if(j->IsActive()) j->setInactive();
+                if(j->IsActive()){
+                     j->setInactive();
+                }
         }
     }
 }
 
+
+/* Retuns the index for the Hash with name as the key */
 unsigned int SymbolTable::hash(string name){ 
     unsigned int num = 0,i;
     for(i=0 ; i<name.length() ; i++)
@@ -89,3 +100,24 @@ unsigned int SymbolTable::hash(string name){
 
     return num % BUCKETS;
 }
+
+/* Prints all information for all symbols for all scope */
+void SymbolTable::printSymbols(){
+    list<ScopeLists>::iterator i;
+    list<SymbolTableEntry>::iterator j;
+
+    for (i = scopelists.begin() ; i != scopelists.end() ; i++){
+        cout << "\n----------------------------- Scope   #" << i->getScope() << "  -----------------------------" << endl;
+        for (j = i->S_list->begin() ; j != i->S_list->end() ; j++){
+            cout <<"\"" << j->getVar()->getName()<<"\"" << "\t"  ;
+            if(j->getType()==LIBFUNC) cout << "[library function]\t";
+            else if(j->getType()==USERFUNC) cout << "[user function]\t";
+            else if(j->getType()==GLOBAL) cout << "[global variable]\t";
+            else if(j->getType()==LOCALV) cout << "[local variable]\t";
+            else cout << "[formal argument]\t";
+            cout << "(line " << j->getVar()->getLine() << ")\t" ;
+            cout << "(scope " << j->getVar()->getScope() << ")\t"<< endl ;
+        }
+    }
+ }
+

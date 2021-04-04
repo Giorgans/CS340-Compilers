@@ -17,6 +17,7 @@ using namespace std;
 
 /*For multiline/nested comments*/
 int bcomment_depth = 0;
+void String_Esc_Fix(string content,int line);
 
 %}
 
@@ -77,7 +78,7 @@ undefined .
 }
 {integer}       { yylval.intValue = atoi(yytext);    return INTCONST;}
 {real}	        { yylval.realValue = atof(yytext);   return REALCONST;}
-{string}        { yylval.stringValue =strdup(yytext);  return STRING;}
+{string}        { String_Esc_Fix(yytext,yylineno); yylval.stringValue =strdup(yytext);  return STRING;}
 {punctuator}    {
     string text = yytext;
     if(!text.compare("{")) return LEFT_BRACE;
@@ -99,9 +100,9 @@ undefined .
 {undefined}		{
 	string undef; stringstream temp; temp << yytext; temp >> undef;
     if(!undef.compare("\""))
-		cout << "Error: String that starts in line " + to_string(yylineno) + " isn't closed!\n"; 
+		cout << "[Lexical Analysis] Error: String that starts in line " + to_string(yylineno) + " isn't closed!\n"; 
     else 
-		cout << "Undefined input \"" + undef +  "\" in line " + to_string(yylineno) + "\n";       
+		cout << "[Lexical Analysis] Undefined input \"" + undef +  "\" in line " + to_string(yylineno) + "\n";       
 }
 {single_line_comment} {}
 {multi_line_comment_open} {
@@ -119,6 +120,17 @@ undefined .
 }
 <COMMENT>. {}
 <COMMENT>{delimiter} {}
-<COMMENT><<EOF>> {cout << "Block comment is not closed " <<endl; BEGIN(INITIAL);}
+<COMMENT><<EOF>> {cout << "[Lexical Analysis] Block comment is not closed " <<endl; BEGIN(INITIAL);}
 
 %%
+/*Analyses a string to find possible errors with escape characters*/
+void String_Esc_Fix(string content,int line){ 
+	string temp;
+	for(int i=0 ; i<content.size() ; i++){
+        if(content[i]=='\\' && content[i+1]=='\"' && content[i+2]=='\0'){
+			cout << "[Lexical Analysis] Error: String that starts in line " + to_string(yylineno) + " isn't closed!\n"; i+=2; }
+        else if(content[i]=='\\' && content[i+1]!=' '){
+        	cout << "[Lexical Analysis] Warning: Illegal escape char " << content[i+1] << " in line " + to_string(line) + "\n"; i++; }
+        else temp += content[i];  
+    }
+}

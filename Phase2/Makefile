@@ -5,12 +5,17 @@ FL=flex
 BS=bison
 BSFLAGS= -v --yacc --defines="parser.h"
 OFLAGS=-o
-
+RUN=./
 
 REM=rm -f
+.PHONY: all run 
 
+all: run
 
-all:	lexical_analyzer.cpp syntax_analyzer.cpp SymbolTable.cpp
+run: syntax_analyzer
+	$(RUN)syntax_analyzer test.txt
+
+syntax_analyzer:	lexical_analyzer.cpp syntax_analyzer.cpp SymbolTable.cpp
 	$(CC) $(OFLAGS) syntax_analyzer lexical_analyzer.cpp syntax_analyzer.cpp SymbolTable.cpp
 
 lexical_analyzer.cpp:	lex_an_v2.l

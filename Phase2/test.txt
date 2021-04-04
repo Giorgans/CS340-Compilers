@@ -1,0 +1,41 @@
+
+if(q){
+
+    if(w==1){
+
+        if(true)
+        {
+            if(false)
+            {
+            d=4;
+            }
+        }
+        yeet();
+        b=2;
+    }
+a=1;
+}
+kappa=0;
+                    
+function GET_CANCER(){
+    
+   cancer=1;     
+    function (kappa , keepo){
+        
+        secret_cancer_cell;
+        ::kappa;
+        return;
+    }
+    return cancer;
+} 
+
+function GET_KAK(){
+    kak="tru";
+        function (kappa , keepo){
+            secret_cancer_cell = 2;
+            ::kappa;
+            return;
+        }
+        return kak;
+}
+

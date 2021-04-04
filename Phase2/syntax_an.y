@@ -22,7 +22,10 @@ extern FILE *yyin;
 
 SymbolTable table;
 unsigned int scope=0;
-bool func_open=false;
+unsigned int func_num=0;
+
+bool func_open=false,loop_open=false,return_state=false;
+
 
 %}
 
@@ -47,7 +50,7 @@ bool func_open=false;
 %token IF ELSE WHILE FOR FUNCTION RETURN BREAK CONTINUE AND NOT OR LOCAL TRUE FALSE NIL
 %token MOD GREATER_THAN GREATER_EQUAL LESS_THAN LESS_EQUAL PLUS_PLUS PLUS MINUS MULTIPLY DIV  MINUS_MINUS ASSIGN EQUAL NOT_EQUAL 
 %token LEFT_BRACE RIGHT_BRACE LEFT_PARENTHESIS RIGHT_PARENTHESIS LEFT_BRACKET RIGHT_BRACKET SEMICOLON COLON DOUBLE_COLON DOT DOUBLE_DOT COMMA
-%type <entry> lvalue
+%type <stringValue> lvalue
 
 %right ASSIGN
 %left OR
@@ -63,48 +66,81 @@ bool func_open=false;
 %right THEN ELSE
 %%
 
-program: stmts {cout<<"\nPROGRAM START";}
+program: stmts {}
         ;
-stmt:  exp SEMICOLON {cout<<"exp;";}
-      | if_stmt {cout<<"if(expr)stmt";}
-      | while_stmt {cout<<"while(expr)stmt";}
-      | for_stmt {cout<<"for(elist;expr;elist;)stmt"<<endl;}
-      | ret_stmt {cout<<"return ; OR expr;";}
-      | BREAK SEMICOLON {cout<<"break;";}
-      | CONTINUE SEMICOLON {cout<<"continue;";}
-      | block {cout<<"{}";}
-      | f_def {cout<<"function def";}
-      | SEMICOLON {cout<< ";";}
+stmt:  exp SEMICOLON {}
+      | if_stmt {}
+      | while_stmt {}
+      | for_stmt {}
+      | ret_stmt {}
+      | BREAK SEMICOLON {
+        if(!loop_open) 
+            cout << "[Syntax Analysis] ERROR: Wrong declaration of BREAK statement in line " << yylineno << endl;
+      }
+      | CONTINUE SEMICOLON {
+        if(!loop_open) 
+            cout << "[Syntax Analysis] ERROR: Wrong declaration of CONTIUE statement in line " << yylineno << endl;
+      }
+      | block {}
+      | f_def {}
+      | SEMICOLON {}
       ;
 stmts: stmts stmt {}
     | {}
     ;
-exp: assign_exp {cout<<"=";}
-    | exp PLUS exp {cout<<"+";}
-    | exp MINUS exp {cout<<"-";}
-    | exp MULTIPLY exp {cout<<"*"<<endl;}
-    | exp DIV exp {cout<<"/"<<endl;}
-    | exp MOD exp {cout<<"%"<<endl;}
-    | exp LESS_THAN exp {cout<<"<"<<endl;}
-    | exp GREATER_THAN exp {cout<<">"<<endl;}
-    | exp LESS_EQUAL exp {cout<<"<="<<endl;}
-    | exp GREATER_EQUAL exp {cout<<">="<<endl;}
-    | exp AND exp {cout<<"&&";}
-    | exp OR exp {cout<<"||";}
-    | exp EQUAL exp {cout<<"==";}
-    | exp NOT_EQUAL exp {cout<<"!=";}
+exp: assign_exp {}
+    | exp PLUS exp {}
+    | exp MINUS exp {}
+    | exp MULTIPLY exp {}
+    | exp DIV exp {}
+    | exp MOD exp {}
+    | exp LESS_THAN exp {}
+    | exp GREATER_THAN exp {}
+    | exp LESS_EQUAL exp {}
+    | exp GREATER_EQUAL exp {}
+    | exp AND exp {}
+    | exp OR exp {}
+    | exp EQUAL exp {}
+    | exp NOT_EQUAL exp {}
     | term {}
     ;
 term: LEFT_PARENTHESIS {} exp RIGHT_PARENTHESIS {}
     | MINUS exp %prec UMINUS {}
     | NOT exp {}
-    | PLUS_PLUS lvalue {}
-    | lvalue PLUS_PLUS {}
-    | MINUS_MINUS lvalue {}
-    | lvalue MINUS_MINUS {}
-    | primary {}
+    | PLUS_PLUS lvalue {
+        SymbolTableEntry *symbol=table.Lookup($2);
+        if(symbol->getType()==USERFUNC || symbol->getType()==LIBFUNC)
+            cout <<"[Syntax Analysis] ERROR: trying to left increase the function " << $2 << "in line" <<  yylineno << endl;
+    }
+    | lvalue PLUS_PLUS {
+        SymbolTableEntry *symbol=table.Lookup($1);
+        if(symbol->getType()==USERFUNC || symbol->getType()==LIBFUNC)
+            cout <<"[Syntax Analysis] ERROR: trying to right increase the function " << $1 << "in line" <<yylineno << endl;
+    }
+    | MINUS_MINUS lvalue {
+        SymbolTableEntry *symbol=table.Lookup($2);
+        if(symbol->getType()==USERFUNC || symbol->getType()==LIBFUNC)
+            cout <<"[Syntax Analysis] ERROR: trying to left decrease the function " << $2 << "in line" << yylineno << endl;
+    }
+
+    | lvalue MINUS_MINUS {
+             SymbolTableEntry *symbol=table.Lookup($1);
+        if(symbol->getType()==USERFUNC || symbol->getType()==LIBFUNC)
+            cout <<"[Syntax Analysis] ERROR: trying to right decrease the function " << $1 << "in line" << yylineno << endl;
+    }
+    | primary  {}
     ;
-assign_exp: lvalue ASSIGN exp {}
+assign_exp: lvalue ASSIGN exp {
+    SymbolTableEntry *symbol;
+    for(int i=scope; i>=0; i--){
+    symbol=table.LookupScope($1,i);
+    if(symbol!=NULL && (symbol->getType()==USERFUNC || symbol->getType()==LIBFUNC)){
+        cout << "[Syntax Analysis] ERROR: trying to assign a value in " << $1 << " in line "<< yylineno << endl;
+         break;
+    }  
+}
+    
+}
     ;
 primary: lvalue {}
     | call {}
@@ -113,47 +149,89 @@ primary: lvalue {}
     | const {}
     ;
 lvalue: ID {
-            cout << "************ID FOUND**********" << endl;
-            SymbolTableEntry *symbol = table.Lookup($1),*temp;
+    SymbolTableEntry *temp;
+unsigned int temp_scope;
             bool found = false;
 
-            if(symbol!=NULL){
-                for (int tempscope=scope; tempscope>=0 ; --tempscope){
-                    temp = table.LookupScope($1,tempscope);
-                    if(temp!=NULL && temp->IsActive()) found = true;
-                }
-                if(found) break;
-            }
-            if(!scope)
+            if(table.Lookup($1)!=NULL){
+                for (int i=scope; i>=0 ; --i){
+                    temp = table.LookupScope($1,i);
+                    if(temp!=NULL && temp->IsActive()) {
+                        found = true;
+                        temp_scope=i;
+                        break;
+                    }
+                } 
+            } 
+            if(!temp_scope)
                 table.Insert($1,GLOBAL,scope,yylineno);
-            else if(found && func_open && temp->getType()!=USERFUNC)
-                cout << "ERROR! Cannot access" <<  $1  <<  "in line" << yylineno << endl;
-            else
+            else if(return_state==true)
+                return_state=false;
+            else if(found && func_open && temp_scope && temp->getType()!=USERFUNC)
+                cout << "[Syntax Analysis] ERROR: Cannot access " <<  $1  <<  " in line " << yylineno << endl;
+            else if(!found)
                 table.Insert($1,LOCALV,scope,yylineno);
+            
+            $$ = strdup($1);
+
 }
     |   LOCAL ID {
+                unsigned int temp_scope,found;
+                SymbolTableEntry *symbol,*temp;
+            symbol =table.Lookup($2);
+            if(symbol==NULL){
+                for(int i=scope ; i>=0 ; i--){
+                    temp=table.LookupScope($2,i);
+                    if(temp!=NULL && temp->IsActive() && temp->getType()!=USERFUNC){
+                        found=true;
+                        temp_scope=i;
+                    }
+                    if(found) break;
 
-            
+                }
+                temp=table.LookupScope($2,0);
+                if(temp!=NULL && temp_scope==0 && temp->IsActive() && temp->getType()==LIBFUNC)
+                    cout << "[Syntax Analysis] ERROR: Trying to overshadow a library function in line " << yylineno << endl;
+                else if(!temp_scope)
+                    table.Insert($2,GLOBAL,scope,yylineno);
+                else if(found && func_open && temp_scope)
+                    cout << "[Syntax Analysis] ERROR: Cannot access " <<  $2 <<" a library function in line " << yylineno << endl;
+                else
+                    table.Insert($2,LOCALV,scope,yylineno);
+
+                $$=strdup($2);
+            }
+            else{
+                if(symbol->getType()==USERFUNC)
+                    cout << "[Syntax Analysis] ERROR: redeclaration of " << $2 << " as variable in line " << yylineno << endl;
+                if(symbol->getType()==LIBFUNC)
+                    cout << "[Syntax Analysis] ERROR: collision with library function << $2 << in line " << yylineno << endl;
+            }
+
     }
-    |   DOUBLE_COLON ID {}
+    |   DOUBLE_COLON ID {
+        if(table.LookupScope($2,0)==NULL)
+                cout << "[Syntax Analysis] ERROR! there is no declaration of global var " << $2 <<" in line " << yylineno << endl;
+    }
     |   member {}
     ;
+
 member:  lvalue DOT ID {}
     | lvalue LEFT_BRACKET exp RIGHT_BRACKET {}
     | call DOT ID {}
     | call LEFT_BRACKET exp RIGHT_BRACKET {}
     ;
 call: call LEFT_PARENTHESIS elist RIGHT_PARENTHESIS {}
-    | lvalue callsuffix {cout<<"Vghkene to call mre";}
-    | LEFT_PARENTHESIS f_def RIGHT_PARENTHESIS LEFT_PARENTHESIS elist RIGHT_PARENTHESIS {cout<<"\n found this shitty call";}
+    | lvalue callsuffix {}
+    | LEFT_PARENTHESIS f_def RIGHT_PARENTHESIS LEFT_PARENTHESIS elist RIGHT_PARENTHESIS {}
     ; 
    
 callsuffix: normcall {}
     | methodcall {}
     ;
-normcall: LEFT_PARENTHESIS{scope++;} elist RIGHT_PARENTHESIS {scope--;}
+normcall: LEFT_PARENTHESIS{} elist RIGHT_PARENTHESIS {}
     ;
-methodcall: DOUBLE_DOT ID LEFT_PARENTHESIS{scope++;} elist RIGHT_PARENTHESIS {scope--;}
+methodcall: DOUBLE_DOT ID LEFT_PARENTHESIS elist RIGHT_PARENTHESIS {}
     ;
 
 elist: exp {}
@@ -167,18 +245,53 @@ obj_def:  LEFT_BRACKET indexed RIGHT_BRACKET {}
 indexed: index_el {} 
     |indexed COMMA index_el {}
     ;
-index_el: LEFT_BRACE{scope++;} exp COLON exp RIGHT_BRACE {scope--;}
+index_el: LEFT_BRACE exp COLON exp RIGHT_BRACE {}
     ;
-block: LEFT_BRACE {scope++;} stmts RIGHT_BRACE {scope--;}
+block: LEFT_BRACE {scope++;} stmts RIGHT_BRACE { table.Hide(scope);
+     scope--;}
     ;
 
 f_def: FUNCTION ID{
+        SymbolTableEntry *symbol;
+        symbol=table.Lookup($2);
+            if(symbol!=NULL){
+                if(symbol->getType()==LIBFUNC)
+                    cout << "[Syntax Analysis] ERROR: Trying to overshadow a library function in line " << yylineno << endl;           
+                else if(symbol->getType()==USERFUNC){
+                    if(symbol->getVar()->getScope()==scope){
+                    cout<< "[Syntax Analysis] ERROR: redefinition of " << $2 << " in line: " << yylineno << endl;
+                    cout<< "\tNote: Previous definition of "<< $2 << " in line: " << symbol->getVar()->getLine() << endl;
+                    }
+                    else 
+                    table.Insert($2,USERFUNC,scope,yylineno);
+                }
+                else if(symbol->getType()==GLOBAL){
+                    cout<< "[Syntax Analysis] ERROR: redeclaration of Global Variable " << $2 << " as function in line: "<< yylineno<<endl;
+                }
+                else if(symbol->getType()==LOCALV || symbol->getType()==FORMAL){
+                    if(symbol->getVar()->getScope()==scope)
+                        cout<< "[Syntax Analysis] ERROR: redeclaration of local variable " << $2 <<" as function in line: "<< yylineno<<endl;
+                    else
+                        table.Insert($2,USERFUNC,scope,yylineno);
+
+                }
+            }
+            else{
+                table.Insert($2,USERFUNC,scope,yylineno);
+            }
 
         }
         LEFT_PARENTHESIS {scope++;} 
-        idlist RIGHT_PARENTHESIS  {func_open=true;} 
-        block {scope--;} {func_open=false;}
-    |  FUNCTION LEFT_PARENTHESIS {scope++;} idlist RIGHT_PARENTHESIS {func_open=true;}  block {scope--;}  {func_open=false;}
+        idlist RIGHT_PARENTHESIS  { scope--;}{func_open=true;} 
+        block{} {func_open=false;}
+        
+    |  FUNCTION { string fname = "_$" + to_string(func_num);
+                   func_num++;
+                   table.Insert(fname,USERFUNC,scope,yylineno);
+
+          }
+         LEFT_PARENTHESIS {scope++;} idlist RIGHT_PARENTHESIS { scope--;} { func_open=true;}  
+    block {func_open=false;}
     ;
 const: INTCONST {}
     |  REALCONST {}
@@ -187,41 +300,65 @@ const: INTCONST {}
     |  TRUE {}
     |  FALSE {}
     ;
-idlist: ID{}
-    | idlist COMMA ID {}
+idlist: ID {
+    SymbolTableEntry *symbol = table.LookupScope($1,scope),*temp;
+
+    if(symbol==NULL){
+	    temp = table.LookupScope($1,0);
+        if(temp!=NULL && temp->getType()==LIBFUNC )
+            cout << "[Syntax Analysis] ERROR: Trying to overshadow a library function in line " << yylineno << endl;           
+        else
+            table.Insert($1,FORMAL,scope,yylineno);
+    }
+    else {
+        if(symbol->getType()==LIBFUNC)
+            cout << "[Syntax Analysis] ERROR: Trying to overshadow a library function in line " << yylineno << endl;           
+        else if(symbol->IsActive()){
+            cout<< "[Syntax Analysis] ERROR: redefinition of " << $1 << " in line: " << yylineno << endl;
+            cout<< "\tNote: Previous definition of "<< $1 << " in line: " << symbol->getVar()->getLine() << endl;
+        }
+    }
+}
+    | idlist COMMA ID {
+        SymbolTableEntry *symbol = table.LookupScope($3,scope),*temp;
+
+        if(symbol==NULL){
+	        temp = table.LookupScope($3,0);
+            if(temp!=NULL && temp->getType()==LIBFUNC)
+                cout << "[Syntax Analysis] ERROR: Trying to overshadow a library function in line " << yylineno << endl;           
+            else 
+                table.Insert($3,FORMAL,scope,yylineno);
+        }
+        else {
+            if(symbol->getType()==LIBFUNC)
+                cout << "[Syntax Analysis] ERROR: Trying to overshadow a library function in line " << yylineno << endl;           
+            else if(symbol->IsActive()){
+                cout<< "[Syntax Analysis] ERROR: redefinition of " << $3 << " in line: " << yylineno << endl;
+                cout<< "\tNote: Previous definition of "<< $3 << " in line: " << symbol->getVar()->getLine() << endl;
+	    }
+  }
+
+    }
     | {}
     ;
 if_stmt: IF LEFT_PARENTHESIS exp RIGHT_PARENTHESIS stmt {}
     | IF LEFT_PARENTHESIS exp RIGHT_PARENTHESIS stmt ELSE stmt{}
     ;
-while_stmt: WHILE LEFT_PARENTHESIS exp RIGHT_PARENTHESIS stmt {}
+while_stmt: WHILE LEFT_PARENTHESIS{loop_open=true;} exp RIGHT_PARENTHESIS{loop_open=false;} stmt {}
     ;
-for_stmt: FOR LEFT_PARENTHESIS elist SEMICOLON exp SEMICOLON elist RIGHT_PARENTHESIS stmt {}
+for_stmt: FOR LEFT_PARENTHESIS {loop_open=true;} elist SEMICOLON exp SEMICOLON elist RIGHT_PARENTHESIS {loop_open=false;} stmt {}
     ;
-ret_stmt: RETURN SEMICOLON {}
-    | RETURN exp SEMICOLON {}
+ret_stmt: RETURN SEMICOLON {
+     if(!func_open)
+         cout << "[Syntax Analysis] ERROR: Wrong use of RETURN statement in line " << yylineno << endl;
+
+}
+    | RETURN exp SEMICOLON {
+        if(!func_open)                                   
+            cout << "[Syntax Analysis] ERROR: Wrong use of RETURN statement in line "<< yylineno << endl;
+    }
     ;
 %%
-
-void printSymbols(){
-    list<ScopeLists>::iterator i;
-    list<SymbolTableEntry>::iterator j;
-
-    for (i = table.scopelists.begin() ; i != table.scopelists.end() ; i++){
-        cout << "\n---------- Scope   #" << i->getScope() << "  ----------" << endl;
-        for (j = i->S_list->begin() ; j != i->S_list->end() ; j++){
-            cout <<"\"" << j->getVar()->getName()<<"\"" << "\t"  ;
-            if(j->getType()==LIBFUNC) cout << "[library function]\t";
-            else if(j->getType()==USERFUNC) cout << "[user function]\t";
-            else if(j->getType()==GLOBAL) cout << "[global variable]\t";
-            else if(j->getType()==LOCALV) cout << "[local variable]\t";
-            else cout << "[formal argument]\t";
-            cout << "(line " << j->getVar()->getLine() << ")\t" ;
-            cout << "(scope " << j->getVar()->getScope() << ")\t"<< endl ;
-        }
-    }
- }
-
 
 int yyerror(const char* yaccProvidedMessage){
 	fprintf(stderr, "%s: at line %d before token: %s\n", yaccProvidedMessage, yylineno, yytext);
@@ -230,16 +367,18 @@ int yyerror(const char* yaccProvidedMessage){
 }
 
 int main(int argc, char **argv) { 
-  if(argc>1){
-    if(!(yyin = fopen(argv[1],"r"))){
-      fprintf(stderr, "Cannot read file %s\n",argv[1]);
-      return 1;
+    if(argc>1){
+        if(!(yyin = fopen(argv[1],"r"))){
+        fprintf(stderr, "Cannot read file %s\n",argv[1]);
+        return 1;
+        }
     }
-  }
-  else yyin = stdin;    
+    else yyin = stdin;    
+    cout << "\n--------------------------- Errors/Warnings ---------------------------" << endl;
+    yyparse();
+    cout << "-----------------------------------------------------------------------" << endl;
 
-  yyparse();
-  printSymbols();
+  table.printSymbols();
 
   return 0; 
 }

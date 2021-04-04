@@ -8,6 +8,7 @@
 #define BUCKETS 1024
 using namespace std;
 
+
 enum SymbolType {
 GLOBAL, LOCALV, FORMAL, USERFUNC, LIBFUNC
 };
@@ -97,6 +98,7 @@ typedef class SymbolTable {
         SymbolTableEntry* Lookup(string name); 
         SymbolTableEntry* LookupScope(string name,unsigned int scope);
         void Hide(unsigned int scope);
+        void printSymbols();
     SymbolTable(){
         for (int i=0 ;i<BUCKETS ; ++i)
             HashTable[i] = new list<SymbolTableEntry>();
