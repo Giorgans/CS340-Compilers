@@ -5,13 +5,10 @@
 LEX FILE UPDATE: DONE
 SYMBOL TABLE : DONE
 GRAMMAR: DONE 
-ERRORS: 1) FUNCTION --,++ : DONE 
-        2) overshadowing  : DONE 
-        3) redefinition   : DONE
-        4) return error   : DONE
-        4) loop break continue error: DONE
-TO DO:
-
+ALL ERROR CASES: DONE
+TO DO: 1) Test if all tokens are inserted right
+       2) Recheck grammar rules 
+       3) Cleaner code
 ```
 ---------------------------------
 ```
