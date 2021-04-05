@@ -120,17 +120,29 @@ undefined .
 }
 <COMMENT>. {}
 <COMMENT>{delimiter} {}
-<COMMENT><<EOF>> {cout << "[Lexical Analysis] Block comment is not closed " <<endl; BEGIN(INITIAL);}
+<COMMENT><<EOF>> {cout << "[Lexical Analysis] ERROR: Block comment is not closed " <<endl; BEGIN(INITIAL);}
 
 %%
 /*Analyses a string to find possible errors with escape characters*/
+/*Analyses a string to find possible escape characters*/
 void String_Esc_Fix(string content,int line){ 
 	string temp;
 	for(int i=0 ; i<content.size() ; i++){
-        if(content[i]=='\\' && content[i+1]=='\"' && content[i+2]=='\0'){
-			cout << "[Lexical Analysis] Error: String that starts in line " + to_string(yylineno) + " isn't closed!\n"; i+=2; }
+        if(content[i]=='\\' && content[i+1]=='n'){ i++; temp +=  "\n"; }
+        else if(content[i]=='\\' && content[i+1]=='t'){ i++; temp +=  "\t"; }
+        else if(content[i]=='\\' && content[i+1]=='r'){ i++; temp +=  "\r"; }
+        else if(content[i]=='\\' && content[i+1]=='v'){ i++; temp +=  "\v"; }
+        else if(content[i]=='\\' && content[i+1]=='r'){ i++; temp +=  "\r"; }
+        else if(content[i]=='\\' && content[i+1]=='f'){ i++; temp +=  "\f"; }
+        else if(content[i]=='\\' && content[i+1]=='e'){ i++; temp +=  "\e"; }
+        else if(content[i]=='\\' && content[i+1]=='b'){ i++; temp +=  "\b"; }
+        else if(content[i]=='\\' && content[i+1]=='\"'){ i++; temp +=  "\""; }
+        else if(content[i]=='\\' && content[i+1]=='\''){ i++; temp +=  "\'"; }
+        else if(content[i]=='\\' && content[i+1]=='\\'){ i++; temp +=  "\\"; }
+        else if(content[i]=='\\' && content[i+1]=='\"' && content[i+2]=='\0'){
+			cout << "[Lexical Analysis] ERROR: String that starts in line " + to_string(yylineno) + " isn't closed!\n"; i+=2; }
         else if(content[i]=='\\' && content[i+1]!=' '){
-        	cout << "[Lexical Analysis] Warning: Illegal escape char " << content[i+1] << " in line " + to_string(line) + "\n"; i++; }
+        	cout << "[Lexical Analysis] WARNING: Illegal escape char " << content[i+1] << " in line " + to_string(line) + "\n"; i++; }
         else temp += content[i];  
     }
 }
