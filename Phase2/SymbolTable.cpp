@@ -119,5 +119,7 @@ void SymbolTable::printSymbols(){
             cout << "(scope " << j->getVar()->getScope() << ")\t"<< endl ;
         }
     }
+    cout << "-----------------------------------------------------------------------" << endl;
+
  }
 
