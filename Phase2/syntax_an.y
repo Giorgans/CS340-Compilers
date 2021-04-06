@@ -22,8 +22,8 @@ extern FILE *yyin;
 
 SymbolTable table;
 unsigned int scope=0;
-unsigned int func_num=0,func_open=0;
-bool loop_open=false;
+unsigned int loop_open=0,func_open=0,func_num=0;
+bool isMember=false;
 
 
 %}
@@ -67,16 +67,14 @@ bool loop_open=false;
 
 program: stmts ;
 stmt:  exp SEMICOLON 
-      | if_stmt | while_stmt | for_stmt | ret_stmt 
+      |  if_stmt | {loop_open++;} while_stmt {loop_open--;} | {loop_open++;} for_stmt {loop_open--;} | ret_stmt 
       | BREAK SEMICOLON {
-        if(!loop_open) 
-            cout << "[Syntax Analysis] ERROR: Wrong declaration of BREAK statement in line " << yylineno << endl;
+        if(!loop_open) cout << "[Syntax Analysis] ERROR: Wrong declaration of BREAK statement in line " << yylineno << endl;
       }
       | CONTINUE SEMICOLON {
-        if(!loop_open) 
-            cout << "[Syntax Analysis] ERROR: Wrong declaration of CONTIUE statement in line " << yylineno << endl;
+        if(!loop_open) cout << "[Syntax Analysis] ERROR: Wrong declaration of CONTIUE statement in line " << yylineno << endl;
       }
-      | block| f_def | SEMICOLON ;
+      | block | f_def | SEMICOLON ;
 
 stmts: stmts stmt | ;
 
@@ -102,7 +100,7 @@ term: LEFT_PARENTHESIS exp RIGHT_PARENTHESIS | MINUS exp %prec UMINUS | NOT exp
     }
 
     | lvalue MINUS_MINUS {
-             SymbolTableEntry *symbol=table.Lookup($1);
+        SymbolTableEntry *symbol=table.Lookup($1);
         if(symbol->getType()==USERFUNC || symbol->getType()==LIBFUNC)
             cout <<"[Syntax Analysis] ERROR: trying to right decrease the function \"" << $1 << "\" in line " << yylineno << endl;
     }
@@ -111,17 +109,14 @@ term: LEFT_PARENTHESIS exp RIGHT_PARENTHESIS | MINUS exp %prec UMINUS | NOT exp
 assign_exp: lvalue ASSIGN exp {
     SymbolTableEntry *symbol;
         symbol=table.LookupScope($1,0);
-        if(symbol!=NULL && symbol->getType()==LIBFUNC)
+        if(symbol!=NULL && !isMember && symbol->getType()==LIBFUNC)
             cout << "[Syntax Analysis] ERROR: trying to assign a value to \"" << $1 << "\" library function in line "<< yylineno << endl;
         for(int i=scope ; i>=0 ; i--){
             symbol=table.LookupScope($1,i);
-            if(symbol!=NULL && scope==i && symbol->getType()==USERFUNC){
+            if(symbol!=NULL && !isMember && scope==i && symbol->getType()==USERFUNC)
                 cout << "[Syntax Analysis] ERROR: trying to assign a value to \"" << $1 << "\" user function in line "<< yylineno << endl;
-            }
         }  
-
-    
-        
+        if(isMember) isMember=false;
 };
 
 primary: lvalue | call | obj_def | LEFT_PARENTHESIS f_def RIGHT_PARENTHESIS | const ;
@@ -147,12 +142,10 @@ lvalue: ID {
             }
             else{
                 temp=table.LookupScope($1,temp_scope);
-                if(temp!=NULL && temp->IsActive() && func_open && scope>temp_scope && (temp->getType()==LOCALV || temp->getType()==FORMAL))
+                if(temp!=NULL && temp->IsActive() && !loop_open && func_open && scope>temp_scope && !isMember && (temp->getType()==LOCALV || temp->getType()==FORMAL))
                     cout << "[Syntax Analysis] ERROR: Cannot access \"" << $1 << "\" in line " << yylineno << endl;
-
             }
             $$ = strdup($1);
-
 }
     |   LOCAL ID {
             SymbolTableEntry *symbol,*temp;
@@ -172,9 +165,9 @@ lvalue: ID {
                             if(table.LookupScope($2,0)==NULL)
                                 cout << "[Syntax Analysis] ERROR: there is no declaration of global var \"" << $2 <<"\" in line " << yylineno << endl;  $$=strdup($2);}
                     
-    |   member ;
+    |   member {isMember=true;};
 
-member:  lvalue DOT ID | lvalue LEFT_BRACKET exp RIGHT_BRACKET | call DOT ID | call LEFT_BRACKET exp RIGHT_BRACKET ;
+member:  lvalue DOT ID  | lvalue LEFT_BRACKET exp RIGHT_BRACKET | call DOT ID | call LEFT_BRACKET exp RIGHT_BRACKET ;
 
 call: call LEFT_PARENTHESIS elist RIGHT_PARENTHESIS | lvalue callsuffix | LEFT_PARENTHESIS f_def RIGHT_PARENTHESIS LEFT_PARENTHESIS elist RIGHT_PARENTHESIS ; 
    
@@ -248,9 +241,9 @@ idlist: ID {
 
 if_stmt: IF LEFT_PARENTHESIS exp RIGHT_PARENTHESIS stmt | IF LEFT_PARENTHESIS exp RIGHT_PARENTHESIS stmt ELSE stmt;
 
-while_stmt: WHILE LEFT_PARENTHESIS{loop_open=true;} exp RIGHT_PARENTHESIS{loop_open=false;} stmt ;
+while_stmt: WHILE LEFT_PARENTHESIS exp RIGHT_PARENTHESIS stmt ;
 
-for_stmt: FOR LEFT_PARENTHESIS {loop_open=true;} elist SEMICOLON exp SEMICOLON elist RIGHT_PARENTHESIS {loop_open=false;} stmt ;
+for_stmt: FOR LEFT_PARENTHESIS elist SEMICOLON exp SEMICOLON elist RIGHT_PARENTHESIS stmt ;
 
 ret_stmt: RETURN SEMICOLON {
     if(!func_open) cout << "[Syntax Analysis] ERROR: Wrong use of RETURN statement in line " << yylineno << endl;}
