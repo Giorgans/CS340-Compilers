@@ -81,12 +81,12 @@ undefined .
 {string}        { String_Esc_Fix(yytext,yylineno); yylval.stringValue =strdup(yytext);  return STRING;}
 {punctuator}    {
     string text = yytext;
-    if(!text.compare("{")) return LEFT_BRACE;
-    if(!text.compare("}")) return RIGHT_BRACE;
-    if(!text.compare("(")) return LEFT_PARENTHESIS;
-    if(!text.compare(")")) return RIGHT_PARENTHESIS;
-    if(!text.compare("[")) return LEFT_BRACKET;
-    if(!text.compare("]")) return RIGHT_BRACKET;
+    if(!text.compare("{")) return L_BRACE;
+    if(!text.compare("}")) return R_BRACE;
+    if(!text.compare("(")) return L_PARENTHESIS;
+    if(!text.compare(")")) return R_PARENTHESIS;
+    if(!text.compare("[")) return L_BRACKET;
+    if(!text.compare("]")) return R_BRACKET;
     if(!text.compare(";")) return SEMICOLON;
     if(!text.compare(",")) return COMMA;
     if(!text.compare(":")) return COLON;
