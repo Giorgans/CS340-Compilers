@@ -92,7 +92,6 @@ void SymbolTable::Hide(unsigned int scope){
     }
 }
 
-
 /* Retuns the index for the Hash with name as the key */
 unsigned int SymbolTable::hash(string name){ 
     unsigned int num = 0,i;
@@ -123,4 +122,3 @@ void SymbolTable::printSymbols(){
     cout << "-----------------------------------------------------------------------" << endl;
 
  }
-
