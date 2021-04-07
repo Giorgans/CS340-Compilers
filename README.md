@@ -6,9 +6,8 @@ LEX FILE UPDATE: DONE
 SYMBOL TABLE : DONE
 GRAMMAR: DONE 
 ALL ERROR CASES: DONE
-TO DO: 1) Test if all tokens are inserted right
-       2) Recheck grammar rules 
-       3) Cleaner code
+ALL TEST FILES: DONE
+TO DO: Cleaner code
 ```
 ---------------------------------
 ```
