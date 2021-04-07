@@ -12,7 +12,7 @@ TO DO: Cleaner code
 ---------------------------------
 ```
 --- Members ---
-Georgios Zervos 3384;
+Georgios Zervos 3384
 Stylianos Michelakakis 3524
 Iasonas Ntagiannis 3540
 ```
