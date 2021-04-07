@@ -1,13 +1,13 @@
-/*** ---SYMBOL TABLE HEADER FILE---
+/*** --- SYMBOL TABLE HEADER FILE ---
      Georgios Zervos AM:3384;
 	 Stylianos Michelakakis AM:3524
-	 Iasonas Filippos Ntagiannis AM:3540 ***/
+	 Iasonas Filippos Ntagiannis AM:3540 
+     Compiled and run in Mac OS Big Sur 11.2.3 , x86 chip***/
 #include <iostream>
 #include <list>
 #include <string>
 #define BUCKETS 1024
 using namespace std;
-
 
 enum SymbolType {
 GLOBAL, LOCALV, FORMAL, USERFUNC, LIBFUNC
@@ -32,7 +32,7 @@ typedef class Variable {
 
 typedef class Function { 
     private:
-        string name; //List of arguments unsigned 
+        string name;
         unsigned int scope; 
         unsigned int line;
     public:
@@ -47,6 +47,7 @@ typedef class Function {
     }
 } Function;
 
+/* SymbolTableEntry class containing all info for the symbol */
 typedef class SymbolTableEntry { 
     private:
         bool isActive;
@@ -71,16 +72,16 @@ typedef class SymbolTableEntry {
             this->isActive=true;
             this->type=type;
         }
-
 } SymbolTableEntry;
  
-
+ /* Scopelists class containing a list for each scope */
 typedef class ScopeLists {
     private:
         unsigned int scope;
-    public:
         list <SymbolTableEntry> *S_list;
+    public:
         unsigned int getScope(){return scope;}
+        list <SymbolTableEntry> *getList(){return S_list;}
     ScopeLists (unsigned int scope,SymbolTableEntry *symbol){
         S_list = new list<SymbolTableEntry>();
         this->scope=scope;
@@ -88,12 +89,13 @@ typedef class ScopeLists {
     }
 }ScopeLists;
 
+/* Symbol Table class cointaining both the hashtable and the linked lists for each scope */
 typedef class SymbolTable {
     private:
         list <SymbolTableEntry> *HashTable[BUCKETS];
+        list <ScopeLists> scopelists;
         unsigned int hash(string name);
     public:
-        list <ScopeLists> scopelists;
         void Insert(string name,enum SymbolType type,unsigned int scope,unsigned int line);
         SymbolTableEntry* Lookup(string name); 
         SymbolTableEntry* LookupScope(string name,unsigned int scope);
@@ -101,7 +103,7 @@ typedef class SymbolTable {
         void printSymbols();
     SymbolTable(){
         for (int i=0 ;i<BUCKETS ; ++i)
-            HashTable[i] = new list<SymbolTableEntry>();
+            this->HashTable[i] = NULL;
 
         this->Insert("print",LIBFUNC,0,0);
         this->Insert("input",LIBFUNC,0,0);

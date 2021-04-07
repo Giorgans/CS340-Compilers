@@ -1,7 +1,8 @@
-/*** ---SYMBOL TABLE C++ FILE---
-     Georgios Zervos AM:3384;
+/*** --- SYMBOL TABLE C++ FILE ---
+     Georgios Zervos AM:3384
 	 Stylianos Michelakakis AM:3524
-	 Iasonas Filippos Ntagiannis AM:3540 ***/
+	 Iasonas Filippos Ntagiannis AM:3540 
+     Compiled and run in Mac OS Big Sur 11.2.3 , x86 chip***/
 #include "SymbolTable.h"
 
 /*** Creates a new symbol and stores its address 
@@ -15,19 +16,19 @@ void SymbolTable::Insert(string name,enum SymbolType type,
     else newSymbol->storeVal(new Variable(name,scope,line));
 
     unsigned int index = hash(name);
+    if(HashTable[index]==NULL) HashTable[index] =  new list<SymbolTableEntry>();
     HashTable[index]->push_back(*newSymbol);
 
     list<ScopeLists>::iterator i;
     bool scopefound=false;
     for (i=scopelists.begin() ; i!=scopelists.end() ; i++){
         if(i->getScope()==scope) { 
-            i->S_list->push_back(*newSymbol);
+            i->getList()->push_back(*newSymbol);
             scopefound=true;
         }
     }
 
     if(!scopefound) {
-
         list<ScopeLists>::iterator current,next=scopelists.begin();
         if(scopelists.empty())
             scopelists.push_back(*(new ScopeLists(scope,newSymbol)));
@@ -68,7 +69,7 @@ SymbolTableEntry *SymbolTable::LookupScope(string name,unsigned int scope){
 
     for (i=scopelists.begin() ; i!=scopelists.end() ; i++){
         if(i->getScope()==scope) { 
-            for (j = i->S_list->begin() ; j != i->S_list->end() ; j++){
+            for (j = i->getList()->begin() ; j != i->getList()->end() ; j++){
                 if(!name.compare(j->getVar()->getName()) && j->IsActive())
                     return &*j;
             }
@@ -83,7 +84,7 @@ void SymbolTable::Hide(unsigned int scope){
     list<SymbolTableEntry>::iterator j;
     for (i=scopelists.begin() ; i!=scopelists.end() ; i++){
         if(i->getScope()==scope) { 
-            for (j = i->S_list->begin() ; j != i->S_list->end() ; j++)
+            for (j = i->getList()->begin() ; j != i->getList()->end() ; j++)
                 if(j->IsActive()){
                      j->setInactive();
                 }
@@ -108,7 +109,7 @@ void SymbolTable::printSymbols(){
 
     for (i = scopelists.begin() ; i != scopelists.end() ; i++){
         cout << "\n----------------------------- Scope   #" << i->getScope() << "  -----------------------------" << endl;
-        for (j = i->S_list->begin() ; j != i->S_list->end() ; j++){
+        for (j = i->getList()->begin() ; j != i->getList()->end() ; j++){
             cout <<"\"" << j->getVar()->getName()<<"\"" << "\t"  ;
             if(j->getType()==LIBFUNC) cout << "[library function]\t";
             else if(j->getType()==USERFUNC) cout << "[user function]\t";

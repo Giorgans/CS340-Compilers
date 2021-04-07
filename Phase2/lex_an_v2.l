@@ -1,22 +1,23 @@
 %{
-/*** ---LEXICAL ANALYSIS---
-     Georgios Zervos AM:3384;
+/*** ---LEXICAL ANALYSIS LEX/FLEX FILE---
+     Georgios Zervos AM:3384
 	 Stylianos Michelakakis AM:3524
-	 Iasonas Filippos Ntagiannis AM:3540 ***/
+	 Iasonas Filippos Ntagiannis AM:3540
+     Compiled and run in Mac OS Big Sur 11.2.3 , x86 chip***/
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <string>
 #include <string.h>
-
 #include <cctype>
 #include <stdlib.h>
 #include "parser.h"
-
 using namespace std;
 
 /*For multiline/nested comments*/
 int bcomment_depth = 0;
+
+/*Analyses a string to find possible errors with escape characters*/
 void String_Esc_Fix(string content,int line);
 
 %}
@@ -41,7 +42,7 @@ undefined .
 
 %%
 {keyword}		{
-	    string text = yytext;
+	string text = yytext;
     if(!text.compare("if")) return IF;
 	if(!text.compare("else")) return ELSE;
     if(!text.compare("while")) return WHILE;
@@ -57,7 +58,6 @@ undefined .
     if(!text.compare("true")) return TRUE;
     if(!text.compare("false")) return FALSE;
     if(!text.compare("nil")) return NIL;
-
 }
 {operator}      {
     string text = yytext;
@@ -123,8 +123,8 @@ undefined .
 <COMMENT><<EOF>> {cout << "[Lexical Analysis] ERROR: Block comment is not closed " <<endl; BEGIN(INITIAL);}
 
 %%
+
 /*Analyses a string to find possible errors with escape characters*/
-/*Analyses a string to find possible escape characters*/
 void String_Esc_Fix(string content,int line){ 
 	string temp;
 	for(int i=0 ; i<content.size() ; i++){
