@@ -2,12 +2,6 @@
 ---------------------------------
 ```
 --- TO DO | News  ---
-LEX FILE UPDATE: DONE
-SYMBOL TABLE : DONE
-GRAMMAR: DONE 
-ALL ERROR CASES: DONE
-ALL TEST FILES: DONE
-TO DO: Cleaner code
 ```
 ---------------------------------
 ```
@@ -37,3 +31,8 @@ Iasonas Ntagiannis 3540
 2)Gia run: ./syntax_analyzer <test_file_name>.txt 
 3)Gia delete temp arxeiwn(.cpp,.output,syntax_analyzer):make clean
 ```
+---------------------------------
+--- Phase 3: Intermediate Code ---
+```
+
+
