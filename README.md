@@ -32,7 +32,7 @@ Iasonas Ntagiannis 3540
 3)Gia delete temp arxeiwn(.cpp,.output,syntax_analyzer):make clean
 ```
 ---------------------------------
---- Phase 3: Intermediate Code ---
 ```
+--- Phase 3: Intermediate Code ---
 
 
