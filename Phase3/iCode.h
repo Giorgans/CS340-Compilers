@@ -4,12 +4,6 @@
 	 Iasonas Filippos Ntagiannis AM:3540 
      Compiled and run in Mac OS Big Sur 11.2.3 , x86 chip***/
 #include "SymbolTable_v2.h"
-#define EXPAND_SIZE 1024
-#define CURR_SIZE (total*sizeof(quad))
-#define NEW_SIZE (EXPAND_SIZE*sizeof(quad)+CURR_SIZE)
-quad *quads = (quad*) 0;
-unsigned total = 0;
-unsigned int currQuad=0;
 
 typedef enum iopcode {
     assign, add, sub,
@@ -42,37 +36,39 @@ typedef enum exp_t {
     nil_e
 }exp_t;
 
-typedef class exp{
+typedef class expr{
     private:
         exp_t type;
         Symbol *sym;
-        exp *index;
+        expr *index;
         double numConst;
         string strConst;
         unsigned char boolConst;
     public:
         exp_t getType(){return this->type;}
         Symbol *getSymbol(){return this->sym;}
-        exp *getIndex(){return this->index;}
-        exp(exp_t type){this->type=type;}
-}exp;
+        expr *getIndex(){return this->index;}
+        expr(exp_t type){
+            this->type=type;
+        }
+}expr;
 
 typedef class quad{
     private:
         iopcode op;
-        exp *result;
-        exp *arg1;
-        exp *arg2;
+        expr *result;
+        expr *arg1;
+        expr *arg2;
         unsigned label;
         unsigned line;
     public:
         iopcode getOp(){return this->op;}
-        exp *getResult(){return this->result;}
-        exp *getArg1(){return this->arg1;}
-        exp *getArg2(){return this->arg2;}
+        expr *getResult(){return this->result;}
+        expr *getArg1(){return this->arg1;}
+        expr *getArg2(){return this->arg2;}
         unsigned getLabel(){return this->label;}
         unsigned getLine(){return this->line;}
-        quad(iopcode op,exp *result,exp *arg1,exp *arg2,unsigned label,unsigned line){
+        quad(iopcode op,expr *result,expr *arg1,expr *arg2,unsigned label,unsigned line){
             this->op=op;
             this->result=result;
             this->arg1=arg1;
@@ -85,21 +81,17 @@ typedef class quad{
 
 typedef enum scopespace_t{programvar,functionlocal,formalarg}scopespace_t;
 
-typedef enum symbol_t{var_s,programfunc_s,libraryfunc_s}symbol_t;
-
-unsigned programVarOffset = 0;
-unsigned functionLocalOffset = 0;
-unsigned formalArgOffset = 0;
-unsigned scopeSpaceCounter = 1;
-
 scopespace_t currscopespace(void);
 unsigned currscopeoffset(void);
 void inccurrscopeoffset(void);
 void enterscopespace(void);
 void exitscopespace(void);
 
-void emit(iopcode op,exp *arg1,exp *arg2,exp *result,unsigned label,unsigned line);
+expr *lvalue_exp(Symbol *sym);
 
-exp *emit_iftableitem(exp *e);
+void emit(iopcode op,expr *arg1,expr *arg2,expr *result,unsigned label,unsigned line);
+
+expr *emit_iftableitem(expr *e);
 
 void expand(void);
+

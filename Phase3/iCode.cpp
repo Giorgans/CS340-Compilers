@@ -4,19 +4,31 @@
 	 Iasonas Filippos Ntagiannis AM:3540 
      Compiled and run in Mac OS Big Sur 11.2.3 , x86 chip***/
 #include "iCode.h"
+#define EXPAND_SIZE 1024
+#define CURR_SIZE (total*sizeof(quad))
+#define NEW_SIZE (EXPAND_SIZE*sizeof(quad)+CURR_SIZE)
+unsigned total = 0;
+unsigned int currQuad = 0;
 
-void emit(iopcode op,exp *arg1,exp *arg2,exp *result,unsigned label,unsigned line){
+quad *quads = (quad*) 0;
+
+unsigned programVarOffset = 0;
+unsigned functionLocalOffset = 0;
+unsigned formalArgOffset = 0;
+unsigned scopeSpaceCounter = 1;
+
+void emit(iopcode op,expr *arg1,expr *arg2,expr *result,unsigned label,unsigned line){
     if(currQuad==total) expand();
    
     quad *p = quads+currQuad++;
     p = new quad(op,arg1,arg2,result,label,line);
 }
 
-exp *emit_iftableitem(exp *e){
+expr *emit_iftableitem(expr *e){
     if(e->getType() != tableitem_e)
         return e;
     else{
-        exp *result = new exp(var_e);
+        expr *result = new expr(var_e);
         //emit(tablegetelem,e,e->getIndex(),label,line);
         return result;
     }
@@ -36,7 +48,7 @@ void expand(void){
 scopespace_t currscopespace(void){
     if(scopeSpaceCounter == 1) return programvar;
     else if(!(scopeSpaceCounter % 2)) return formalarg;
-    else functionlocal;
+    else return functionlocal;
 }
 
 unsigned currscopeoffset(void){
@@ -59,3 +71,16 @@ void inccurrscopeoffset(void){
 
 void enterscopespace(void){++scopeSpaceCounter;}
 void exitscopespace(void){assert(scopeSpaceCounter>1);  --scopeSpaceCounter;}
+
+expr *lvalue_exp(Symbol *sym){
+    assert(sym);
+    expr *e;
+    switch(sym->getType()){
+        case var_s :   e = new expr(var_e); break;
+        case programfunc_s :   e = new expr(programfunc_e); break;
+        case libraryfunc_s :   e = new expr(libraryfunc_e); break;
+        default: assert(0);
+    }
+    return e;
+}
+

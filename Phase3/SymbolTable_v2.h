@@ -3,15 +3,16 @@
 	 Stylianos Michelakakis AM:3524
 	 Iasonas Filippos Ntagiannis AM:3540 
      Compiled and run in Mac OS Big Sur 11.2.3 , x86 chip***/
+#ifndef _ICODE_H_
+#define _ICODE_H_
 #include <iostream>
 #include <list>
 #include <string>
 #define BUCKETS 1024
 using namespace std;
 
-enum SymbolType {
-GLOBAL, LOCALV, FORMAL, USERFUNC, LIBFUNC
-};
+/*enum SymbolType {GLOBAL, LOCALV, FORMAL, USERFUNC, LIBFUNC}; */
+typedef enum symbol_t{var_s,programfunc_s,libraryfunc_s}symbol_t;
 
 typedef class Variable { 
     private:
@@ -55,7 +56,7 @@ typedef class Symbol {
             Variable *varVal;
             Function *funcVal; 
         } value;
-        enum SymbolType type; 
+        symbol_t type; 
     public:
         Function *getFunc(){return this->value.funcVal;}
         void storeFunc(Function *function){value.funcVal=function;}
@@ -63,12 +64,12 @@ typedef class Symbol {
         Variable *getVar(){return this->value.varVal;}
         void storeVal(Variable *variable){value.varVal=variable;}
 
-        enum SymbolType getType(){return type;}
+        symbol_t getType(){return type;}
 
         bool IsActive(){return isActive;}
         void setInactive(){isActive=false;}
 
-        Symbol (SymbolType type){
+        Symbol (symbol_t type){
             this->isActive=true;
             this->type=type;
         }
@@ -96,7 +97,7 @@ typedef class SymbolTable {
         list <ScopeLists> scopelists;
         unsigned int hash(string name);
     public:
-        void Insert(string name,enum SymbolType type,unsigned int scope,unsigned int line);
+        void Insert(string name,enum symbol_t type,unsigned int scope,unsigned int line);
         Symbol* Lookup(string name); 
         Symbol* LookupScope(string name,unsigned int scope);
         void Hide(unsigned int scope);
@@ -105,17 +106,18 @@ typedef class SymbolTable {
         for (int i=0 ;i<BUCKETS ; ++i)
             this->HashTable[i] = NULL;
 
-        this->Insert("print",LIBFUNC,0,0);
-        this->Insert("input",LIBFUNC,0,0);
-        this->Insert("objectmemberkeys",LIBFUNC,0,0);
-        this->Insert("objecttotalmembers",LIBFUNC,0,0);
-        this->Insert("objectcopy",LIBFUNC,0,0);
-        this->Insert("totalarguments",LIBFUNC,0,0);
-        this->Insert("argument",LIBFUNC,0,0);
-        this->Insert("typeof",LIBFUNC,0,0);
-        this->Insert("strtonum",LIBFUNC,0,0);
-        this->Insert("sqrt",LIBFUNC,0,0);
-        this->Insert("cos",LIBFUNC,0,0);
-        this->Insert("sin",LIBFUNC,0,0);
+        this->Insert("print",libraryfunc_s,0,0);
+        this->Insert("input",libraryfunc_s,0,0);
+        this->Insert("objectmemberkeys",libraryfunc_s,0,0);
+        this->Insert("objecttotalmembers",libraryfunc_s,0,0);
+        this->Insert("objectcopy",libraryfunc_s,0,0);
+        this->Insert("totalarguments",libraryfunc_s,0,0);
+        this->Insert("argument",libraryfunc_s,0,0);
+        this->Insert("typeof",libraryfunc_s,0,0);
+        this->Insert("strtonum",libraryfunc_s,0,0);
+        this->Insert("sqrt",libraryfunc_s,0,0);
+        this->Insert("cos",libraryfunc_s,0,0);
+        this->Insert("sin",libraryfunc_s,0,0);
     }
 }SymbolTable;
+#endif

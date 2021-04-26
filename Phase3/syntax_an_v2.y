@@ -11,7 +11,9 @@
 #include <list>
 #include <stack>
 #include "parser.h"
-#include "SymbolTable.h"
+#include "SymbolTable_v2.h"
+#include "iCode.h"
+
 #define YY_DECL int alpha_yylex (void* yylval)
 using namespace std;
 
@@ -84,31 +86,31 @@ exp: assign_exp | exp PLUS exp | exp MINUS exp | exp MULTIPLY exp | exp DIV exp 
 
 term: L_PARENTHESIS exp R_PARENTHESIS | MINUS exp %prec UMINUS | NOT exp 
     | PLUS_PLUS lvalue {
-        SymbolTableEntry *symbol=table.Lookup($2);
-        if(symbol->getType()==USERFUNC || symbol->getType()==LIBFUNC)
+        Symbol *symbol=table.Lookup($2);
+        if(symbol->getType()==programfunc_s || symbol->getType()==libraryfunc_s)
             cout <<"[Syntax Analysis] ERROR: Trying to left increase the function \"" << $2 << "\" by 1, in line " <<  yylineno << endl;}
     | lvalue PLUS_PLUS {
-        SymbolTableEntry *symbol=table.Lookup($1);
-        if(symbol->getType()==USERFUNC || symbol->getType()==LIBFUNC)
+        Symbol *symbol=table.Lookup($1);
+        if(symbol->getType()==programfunc_s || symbol->getType()==libraryfunc_s)
             cout <<"[Syntax Analysis] ERROR: Trying to right increase the function \"" << $1 << "\" by 1, in line " <<yylineno << endl;}
     | MINUS_MINUS lvalue {
-        SymbolTableEntry *symbol=table.Lookup($2);
-        if(symbol->getType()==USERFUNC || symbol->getType()==LIBFUNC)
+        Symbol *symbol=table.Lookup($2);
+        if(symbol->getType()==programfunc_s || symbol->getType()==libraryfunc_s)
             cout <<"[Syntax Analysis] ERROR: Trying to left decrease the function \"" << $2 << "\" by 1, in line" << yylineno << endl;}
     | lvalue MINUS_MINUS {
-        SymbolTableEntry *symbol=table.Lookup($1);
-        if(symbol->getType()==USERFUNC || symbol->getType()==LIBFUNC)
+        Symbol *symbol=table.Lookup($1);
+        if(symbol->getType()==programfunc_s || symbol->getType()==libraryfunc_s)
             cout <<"[Syntax Analysis] ERROR: Trying to right decrease the function \"" << $1 << "\" by 1, in line " << yylineno << endl;}
     | primary  ;
 
 assign_exp: lvalue ASSIGN exp {
-    SymbolTableEntry *symbol;
+    Symbol *symbol;
         symbol=table.LookupScope($1,0);
-        if(symbol!=NULL && !isMember && symbol->getType()==LIBFUNC)
+        if(symbol!=NULL && !isMember && symbol->getType()==libraryfunc_s)
             cout << "[Syntax Analysis] ERROR: Trying to assign a value to \"" << $1 << "\" library function, in line "<< yylineno << endl;
         for(int i=scope ; i>=0 ; i--){
             symbol=table.LookupScope($1,i);
-            if(symbol!=NULL && !isMember && scope==i && symbol->getType()==USERFUNC)
+            if(symbol!=NULL && !isMember && scope==i && symbol->getType()==programfunc_s)
                 cout << "[Syntax Analysis] ERROR: Trying to assign a value to \"" << $1 << "\" user function, in line "<< yylineno << endl;
         }  
         if(isMember) isMember=false;
@@ -117,11 +119,12 @@ assign_exp: lvalue ASSIGN exp {
 primary: lvalue | call | obj_def | L_PARENTHESIS f_def R_PARENTHESIS | const ;
 
 lvalue: ID {
-            SymbolTableEntry *symbol,*temp;
+
+            Symbol *symbol,*temp;
             unsigned int temp_scope;
             bool found = false;
             symbol = table.LookupScope($1,scope);
-           
+           cout << "\n\nTESTESTTERST" << endl;
             for(int i=scope ; i>=0 ; i--){
                 temp=table.LookupScope($1,i);
                 if(temp!=NULL && temp->IsActive() ){
@@ -132,26 +135,24 @@ lvalue: ID {
             }
 
             if(!found){
-                if(!scope) table.Insert($1,GLOBAL,scope,yylineno);
-                else table.Insert($1,LOCALV,scope,yylineno);
+                table.Insert($1,var_s,scope,yylineno);
             }
             else{
                 temp=table.LookupScope($1,temp_scope);
-                if(temp!=NULL && temp->IsActive() && !loop_open && func_open && scope>temp_scope && !isMember && (temp->getType()==LOCALV || temp->getType()==FORMAL))
+                if(temp!=NULL && temp->IsActive() && !loop_open && func_open && scope>temp_scope && !isMember && temp->getType()==var_s)
                     cout << "[Syntax Analysis] ERROR: Cannot access \"" << $1 << "\", in line " << yylineno << endl;
             }
             $$ = strdup($1);
 }
     |   LOCAL ID {
-            SymbolTableEntry *symbol,*temp;
+            Symbol *symbol,*temp;
             symbol = table.LookupScope($2,scope);
             if(symbol==NULL){
                 temp=table.LookupScope($2,0);
-                if(temp!=NULL && temp->getType()==LIBFUNC)
+                if(temp!=NULL && temp->getType()==libraryfunc_s)
                     cout << "[Syntax Analysis] ERROR: Collision with library function \""<< $2 << "\", in line " << yylineno << endl;                
                 else{
-                    if(!scope) table.Insert($2,GLOBAL,scope,yylineno);
-                    else table.Insert($2,LOCALV,scope,yylineno);
+                    table.Insert($2,var_s,scope,yylineno);
                 }   
             }
             $$ = strdup($2);
@@ -183,55 +184,55 @@ index_el: L_BRACE exp COLON exp R_BRACE ;
 block: L_BRACE {scope++;} stmts  R_BRACE {table.Hide(scope); scope--;};
 
 f_def: FUNCTION ID{
-        SymbolTableEntry *symbol;
+        Symbol *symbol;
         symbol=table.LookupScope($2,scope);
         if(symbol!=NULL && symbol->IsActive()){
-            if(symbol->getType()==USERFUNC || symbol->getType()==GLOBAL || symbol->getType()==LOCALV)
+            if(symbol->getType()==programfunc_s)
              {
                 cout<< "[Syntax Analysis] ERROR: Redefinition of \"" << $2 << "\" as function, in line " << yylineno << endl;
                 cout<< "\tNote: Previous definition of \""<< $2 << "\" in line " << symbol->getVar()->getLine() << endl;
              }   
-            if(!scope && symbol->getType()==LIBFUNC)
+            if(!scope && symbol->getType()==libraryfunc_s)
                 cout << "[Syntax Analysis] ERROR: Collision with library function \"" << $2 << "\", in line " << yylineno << endl;                
-            if(symbol!=NULL  && symbol->getType()==FORMAL){
+            if(symbol!=NULL  && symbol->getType()==var_s){
                 cout << "[Syntax Analysis] ERROR: Redefinition of \"" << $2 << "\" as function, in line " << yylineno << endl;
                 cout<< "\tNote: Previous definition of \""<< $2 << "\" in line " << symbol->getVar()->getLine() << endl;
             }
         }
-        else table.Insert($2,USERFUNC,scope,yylineno);
+        else table.Insert($2,programfunc_s,scope,yylineno);
     }
         L_PARENTHESIS {scope++;} idlist R_PARENTHESIS  { scope--; func_open++;} block {func_open--;}
         
-    |  FUNCTION { string fname = "_$" + to_string(func_id_num); func_id_num++;table.Insert(fname,USERFUNC,scope,yylineno);}
+    |  FUNCTION { string fname = "_$" + to_string(func_id_num); func_id_num++;table.Insert(fname,programfunc_s,scope,yylineno);}
          L_PARENTHESIS {scope++;} idlist R_PARENTHESIS { scope--; func_open++;}  block{func_open--;};
 
 const: INTCONST | REALCONST | STRING | NIL | TRUE | FALSE ;
 
 idlist: ID {
-    SymbolTableEntry *symbol = table.LookupScope($1,scope),*temp;
+    Symbol *symbol = table.LookupScope($1,scope),*temp;
     if(symbol!=NULL){
             cout<< "[Syntax Analysis] ERROR: Redefinition of \"" << $1 << "\" as variable, in line: " << yylineno << endl;
             cout<< "\tNote: Previous definition of \""<< $1 << "\" in line: " << symbol->getVar()->getLine() << endl;
     }
     else  {
          temp=table.LookupScope($1,0);
-         if(temp!=NULL && temp->getType()==LIBFUNC)
+         if(temp!=NULL && temp->getType()==libraryfunc_s)
             cout << "[Syntax Analysis] ERROR: Collision with library function \""<< $1 << "\", in line " << yylineno << endl;                
-          else table.Insert($1,FORMAL,scope,yylineno);
+          else table.Insert($1,var_s,scope,yylineno);
     }
 }
     | idlist COMMA ID {
-    SymbolTableEntry *symbol = table.LookupScope($3,scope),*temp;
+    Symbol *symbol = table.LookupScope($3,scope),*temp;
     if(symbol!=NULL){
         cout<< "[Syntax Analysis] ERROR: Redefinition of \"" << $3 << "\" as formal, in line: " << yylineno << endl;
         cout<< "\tNote: Previous definition of \""<< $3 << "\" in line: " << symbol->getVar()->getLine() << endl;
     }
     else  {
         temp=table.LookupScope($3,0);
-        if(temp!=NULL && temp->getType()==LIBFUNC)
+        if(temp!=NULL && temp->getType()==libraryfunc_s)
             cout << "[Syntax Analysis] ERROR: Collision with library function \""<< $3 << "\", in line " << yylineno << endl;                
         else 
-            table.Insert($3,FORMAL,scope,yylineno);
+            table.Insert($3,var_s,scope,yylineno);
     }
     }
     | ;

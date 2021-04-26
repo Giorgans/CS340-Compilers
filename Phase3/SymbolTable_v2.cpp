@@ -7,11 +7,11 @@
 
 /*** Creates a new symbol and stores its address 
  *   to the HashTable and the list for each scope **/
-void SymbolTable::Insert(string name,enum SymbolType type,
+void SymbolTable::Insert(string name,symbol_t type,
                                         unsigned int scope,
                                         unsigned int line){
     Symbol *newSymbol = new Symbol(type);
-    if(type==USERFUNC || type==LIBFUNC)
+    if(type==programfunc_s || type==libraryfunc_s)
         newSymbol->storeFunc(new Function(name,scope,line));
     else newSymbol->storeVal(new Variable(name,scope,line));
 
@@ -110,11 +110,9 @@ void SymbolTable::printSymbols(){
         cout << "\n----------------------------- Scope   #" << i->getScope() << "  -----------------------------" << endl;
         for (j = i->getList()->begin() ; j != i->getList()->end() ; j++){
             cout <<"\"" << j->getVar()->getName()<<"\"" << "\t"  ;
-            if(j->getType()==LIBFUNC) cout << "[library function]\t";
-            else if(j->getType()==USERFUNC) cout << "[user function]\t";
-            else if(j->getType()==GLOBAL) cout << "[global variable]\t";
-            else if(j->getType()==LOCALV) cout << "[local variable]\t";
-            else cout << "[formal argument]\t";
+            if(j->getType()==libraryfunc_s) cout << "[library function]\t";
+            else if(j->getType()==programfunc_s) cout << "[user function]\t";
+            else cout << "[variable]\t";
             cout << "(line " << j->getVar()->getLine() << ")\t" ;
             cout << "(scope " << j->getVar()->getScope() << ")\t"<< endl ;
         }
@@ -122,6 +120,8 @@ void SymbolTable::printSymbols(){
     cout << "-----------------------------------------------------------------------" << endl;
 
  }
+
+//------------------------------------------------------------------------------------//
 
 
 
