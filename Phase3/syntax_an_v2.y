@@ -190,13 +190,13 @@ f_def: FUNCTION ID{
             if(symbol->getType()==programfunc_s)
              {
                 cout<< "[Syntax Analysis] ERROR: Redefinition of \"" << $2 << "\" as function, in line " << yylineno << endl;
-                cout<< "\tNote: Previous definition of \""<< $2 << "\" in line " << symbol->getVar()->getLine() << endl;
+                cout<< "\tNote: Previous definition of \""<< $2 << "\" in line " << symbol->getLine() << endl;
              }   
             if(!scope && symbol->getType()==libraryfunc_s)
                 cout << "[Syntax Analysis] ERROR: Collision with library function \"" << $2 << "\", in line " << yylineno << endl;                
             if(symbol!=NULL  && symbol->getType()==var_s){
                 cout << "[Syntax Analysis] ERROR: Redefinition of \"" << $2 << "\" as function, in line " << yylineno << endl;
-                cout<< "\tNote: Previous definition of \""<< $2 << "\" in line " << symbol->getVar()->getLine() << endl;
+                cout<< "\tNote: Previous definition of \""<< $2 << "\" in line " << symbol->getLine() << endl;
             }
         }
         else table.Insert($2,programfunc_s,scope,yylineno);
@@ -212,7 +212,7 @@ idlist: ID {
     Symbol *symbol = table.LookupScope($1,scope),*temp;
     if(symbol!=NULL){
             cout<< "[Syntax Analysis] ERROR: Redefinition of \"" << $1 << "\" as variable, in line: " << yylineno << endl;
-            cout<< "\tNote: Previous definition of \""<< $1 << "\" in line: " << symbol->getVar()->getLine() << endl;
+            cout<< "\tNote: Previous definition of \""<< $1 << "\" in line: " << symbol->getLine() << endl;
     }
     else  {
          temp=table.LookupScope($1,0);
@@ -225,7 +225,7 @@ idlist: ID {
     Symbol *symbol = table.LookupScope($3,scope),*temp;
     if(symbol!=NULL){
         cout<< "[Syntax Analysis] ERROR: Redefinition of \"" << $3 << "\" as formal, in line: " << yylineno << endl;
-        cout<< "\tNote: Previous definition of \""<< $3 << "\" in line: " << symbol->getVar()->getLine() << endl;
+        cout<< "\tNote: Previous definition of \""<< $3 << "\" in line: " << symbol->getLine() << endl;
     }
     else  {
         temp=table.LookupScope($3,0);

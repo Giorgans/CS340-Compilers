@@ -10,10 +10,7 @@
 void SymbolTable::Insert(string name,symbol_t type,
                                         unsigned int scope,
                                         unsigned int line){
-    Symbol *newSymbol = new Symbol(type);
-    if(type==programfunc_s || type==libraryfunc_s)
-        newSymbol->storeFunc(new Function(name,scope,line));
-    else newSymbol->storeVal(new Variable(name,scope,line));
+    Symbol *newSymbol = new Symbol(type,name,scope,line);
 
     unsigned int index = hash(name);
     if(HashTable[index]==NULL) HashTable[index] =  new list<Symbol>();
@@ -55,7 +52,7 @@ Symbol *SymbolTable::Lookup(string name){
     unsigned int index = hash(name);
     list<Symbol>::iterator i;
     for (i = HashTable[index]->begin() ; i != HashTable[index]->end() ; ++i){
-        if(!name.compare(i->getVar()->getName()) && i->IsActive())
+        if(!name.compare(i->getName()) && i->IsActive())
             return &*i;
      }
     return NULL;
@@ -70,7 +67,7 @@ Symbol *SymbolTable::LookupScope(string name,unsigned int scope){
     for (i=scopelists.begin() ; i!=scopelists.end() ; i++){
         if(i->getScope()==scope) { 
             for (j = i->getList()->begin() ; j != i->getList()->end() ; j++){
-                if(!name.compare(j->getVar()->getName()) && j->IsActive())
+                if(!name.compare(j->getName()) && j->IsActive())
                     return &*j;
             }
         }
@@ -109,12 +106,12 @@ void SymbolTable::printSymbols(){
     for (i = scopelists.begin() ; i != scopelists.end() ; i++){
         cout << "\n----------------------------- Scope   #" << i->getScope() << "  -----------------------------" << endl;
         for (j = i->getList()->begin() ; j != i->getList()->end() ; j++){
-            cout <<"\"" << j->getVar()->getName()<<"\"" << "\t"  ;
+            cout <<"\"" << j->getName()<<"\"" << "\t"  ;
             if(j->getType()==libraryfunc_s) cout << "[library function]\t";
             else if(j->getType()==programfunc_s) cout << "[user function]\t";
             else cout << "[variable]\t";
-            cout << "(line " << j->getVar()->getLine() << ")\t" ;
-            cout << "(scope " << j->getVar()->getScope() << ")\t"<< endl ;
+            cout << "(line " << j->getLine() << ")\t" ;
+            cout << "(scope " << j->getScope() << ")\t"<< endl ;
         }
     }
     cout << "-----------------------------------------------------------------------" << endl;

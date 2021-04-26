@@ -78,9 +78,6 @@ typedef class quad{
         }
 }quad;
 
-
-typedef enum scopespace_t{programvar,functionlocal,formalarg}scopespace_t;
-
 scopespace_t currscopespace(void);
 unsigned currscopeoffset(void);
 void inccurrscopeoffset(void);

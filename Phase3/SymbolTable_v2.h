@@ -14,64 +14,33 @@ using namespace std;
 /*enum SymbolType {GLOBAL, LOCALV, FORMAL, USERFUNC, LIBFUNC}; */
 typedef enum symbol_t{var_s,programfunc_s,libraryfunc_s}symbol_t;
 
-typedef class Variable { 
-    private:
-        string name; 
-        unsigned int scope; 
-        unsigned int line;
-    public:
-        string getName(){return name;}
-        unsigned int getScope(){return scope;}
-        unsigned int getLine(){return line;}
-
-    Variable(string name,unsigned int scope,unsigned int line){
-        this->name=name;
-        this->scope=scope;
-        this->line=line;
-    }
-} Variable;
-
-typedef class Function { 
-    private:
-        string name;
-        unsigned int scope; 
-        unsigned int line;
-    public:
-        string getName(){return name;}
-        unsigned int getScope(){return scope;}
-        unsigned int getLine(){return line;}
-
-    Function(string name,unsigned int scope,unsigned int line){
-        this->name=name;
-        this->scope=scope;
-        this->line=line;
-    }
-} Function;
+typedef enum scopespace_t{programvar,functionlocal,formalarg}scopespace_t;
 
 /* SymbolTableEntry class containing all info for the symbol */
 typedef class Symbol { 
     private:
         bool isActive;
-        union {
-            Variable *varVal;
-            Function *funcVal; 
-        } value;
-        symbol_t type; 
+        symbol_t type;
+        string name;
+        scopespace_t space;
+        unsigned scope;
+        unsigned offset;
+        unsigned line;
     public:
-        Function *getFunc(){return this->value.funcVal;}
-        void storeFunc(Function *function){value.funcVal=function;}
-
-        Variable *getVar(){return this->value.varVal;}
-        void storeVal(Variable *variable){value.varVal=variable;}
-
         symbol_t getType(){return type;}
-
+        string getName(){return name;}
+        scopespace_t getSpace(){return space;}
+        unsigned getScope(){return scope;}
+        unsigned getLine(){return line;}
         bool IsActive(){return isActive;}
-        void setInactive(){isActive=false;}
+        void setInactive(){this->isActive=false;}
 
-        Symbol (symbol_t type){
+        Symbol (symbol_t type,string name,unsigned scope,unsigned line){
             this->isActive=true;
             this->type=type;
+            this->name.assign(name);
+            this->scope=scope;
+            this->line=line;
         }
 } Symbol;
  
