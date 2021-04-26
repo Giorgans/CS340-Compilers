@@ -38,6 +38,7 @@ bool isMember=false;
     char *stringValue; 
     int intValue; 
     double realValue;
+    class expr *expression;
 }
 
 %output="syntax_analyzer.cpp"
@@ -46,7 +47,7 @@ bool isMember=false;
 %token <intValue> INTCONST
 %token <realValue> REALCONST
 %token <stringValue> STRING
-%type <stringValue> lvalue
+%type <expression> exp lvalue const
 /*Tokens for keywords*/
 %token IF ELSE WHILE FOR FUNCTION RETURN BREAK CONTINUE AND NOT OR LOCAL TRUE FALSE NIL
 /*Tokens for operators*/
@@ -86,30 +87,30 @@ exp: assign_exp | exp PLUS exp | exp MINUS exp | exp MULTIPLY exp | exp DIV exp 
 
 term: L_PARENTHESIS exp R_PARENTHESIS | MINUS exp %prec UMINUS | NOT exp 
     | PLUS_PLUS lvalue {
-        Symbol *symbol=table.Lookup($2);
+        Symbol *symbol=table.Lookup($2->getSymbol()->getName());
         if(symbol->getType()==programfunc_s || symbol->getType()==libraryfunc_s)
             cout <<"[Syntax Analysis] ERROR: Trying to left increase the function \"" << $2 << "\" by 1, in line " <<  yylineno << endl;}
     | lvalue PLUS_PLUS {
-        Symbol *symbol=table.Lookup($1);
+        Symbol *symbol=table.Lookup($1->getSymbol()->getName());
         if(symbol->getType()==programfunc_s || symbol->getType()==libraryfunc_s)
             cout <<"[Syntax Analysis] ERROR: Trying to right increase the function \"" << $1 << "\" by 1, in line " <<yylineno << endl;}
     | MINUS_MINUS lvalue {
-        Symbol *symbol=table.Lookup($2);
+        Symbol *symbol=table.Lookup($2->getSymbol()->getName());
         if(symbol->getType()==programfunc_s || symbol->getType()==libraryfunc_s)
             cout <<"[Syntax Analysis] ERROR: Trying to left decrease the function \"" << $2 << "\" by 1, in line" << yylineno << endl;}
     | lvalue MINUS_MINUS {
-        Symbol *symbol=table.Lookup($1);
+        Symbol *symbol=table.Lookup($1->getSymbol()->getName());
         if(symbol->getType()==programfunc_s || symbol->getType()==libraryfunc_s)
             cout <<"[Syntax Analysis] ERROR: Trying to right decrease the function \"" << $1 << "\" by 1, in line " << yylineno << endl;}
     | primary  ;
 
 assign_exp: lvalue ASSIGN exp {
     Symbol *symbol;
-        symbol=table.LookupScope($1,0);
+        symbol=table.LookupScope($1->getSymbol()->getName(),0);
         if(symbol!=NULL && !isMember && symbol->getType()==libraryfunc_s)
             cout << "[Syntax Analysis] ERROR: Trying to assign a value to \"" << $1 << "\" library function, in line "<< yylineno << endl;
         for(int i=scope ; i>=0 ; i--){
-            symbol=table.LookupScope($1,i);
+            symbol=table.LookupScope($1->getSymbol()->getName(),i);
             if(symbol!=NULL && !isMember && scope==i && symbol->getType()==programfunc_s)
                 cout << "[Syntax Analysis] ERROR: Trying to assign a value to \"" << $1 << "\" user function, in line "<< yylineno << endl;
         }  
@@ -121,10 +122,10 @@ primary: lvalue | call | obj_def | L_PARENTHESIS f_def R_PARENTHESIS | const ;
 lvalue: ID {
 
             Symbol *symbol,*temp;
+            expr *expression;
             unsigned int temp_scope;
             bool found = false;
             symbol = table.LookupScope($1,scope);
-           cout << "\n\nTESTESTTERST" << endl;
             for(int i=scope ; i>=0 ; i--){
                 temp=table.LookupScope($1,i);
                 if(temp!=NULL && temp->IsActive() ){
@@ -141,8 +142,12 @@ lvalue: ID {
                 temp=table.LookupScope($1,temp_scope);
                 if(temp!=NULL && temp->IsActive() && !loop_open && func_open && scope>temp_scope && !isMember && temp->getType()==var_s)
                     cout << "[Syntax Analysis] ERROR: Cannot access \"" << $1 << "\", in line " << yylineno << endl;
+                
             }
-            $$ = strdup($1);
+            symbol=table.LookupScope($1,scope);
+            $$ = new expr(var_e);
+            $$->insertSymbol(symbol);
+
 }
     |   LOCAL ID {
             Symbol *symbol,*temp;
@@ -155,11 +160,17 @@ lvalue: ID {
                     table.Insert($2,var_s,scope,yylineno);
                 }   
             }
-            $$ = strdup($2);
+            symbol=table.LookupScope($2,scope);
+            $$ = new expr(var_e);
+            $$->insertSymbol(symbol);
+
     }
     |   DOUBLE_COLON ID { 
             if(table.LookupScope($2,0)==NULL)
-                cout << "[Syntax Analysis] ERROR: There is no declaration of global var \"" << $2 <<"\", in line " << yylineno << endl;  $$=strdup($2);}
+                cout << "[Syntax Analysis] ERROR: There is no declaration of global var \"" << $2 <<"\", in line " << yylineno << endl;  
+          
+            }
+
                     
     |   member {isMember=true;};
 
@@ -206,7 +217,30 @@ f_def: FUNCTION ID{
     |  FUNCTION { string fname = "_$" + to_string(func_id_num); func_id_num++;table.Insert(fname,programfunc_s,scope,yylineno);}
          L_PARENTHESIS {scope++;} idlist R_PARENTHESIS { scope--; func_open++;}  block{func_open--;};
 
-const: INTCONST | REALCONST | STRING | NIL | TRUE | FALSE ;
+const: INTCONST { 
+                    $$ = new expr(costnum_e);
+                    $$->setnumconst(stoi(yytext));
+                }   
+    | REALCONST {
+                    $$ = new expr(costnum_e);
+                    $$->setnumconst(stoi(yytext));
+                }
+       | STRING {
+                    $$ = new expr(conststring_e);
+                    $$->setstrConst(yytext);
+
+                }
+        | NIL  {
+                    $$ = new expr(nil_e);
+                }
+        | TRUE {
+                    $$ = new expr(constbool_e);
+                    $$->setboolConst(true);
+                } 
+        | FALSE {
+                    $$ = new expr(constbool_e);
+                    $$->setboolConst(false);
+                } ;
 
 idlist: ID {
     Symbol *symbol = table.LookupScope($1,scope),*temp;

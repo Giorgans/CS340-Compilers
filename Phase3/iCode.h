@@ -43,11 +43,19 @@ typedef class expr{
         expr *index;
         double numConst;
         string strConst;
-        unsigned char boolConst;
+        bool boolConst;
     public:
         exp_t getType(){return this->type;}
         Symbol *getSymbol(){return this->sym;}
+        void insertSymbol(Symbol *sym){this->sym=sym;}
+        double getnumconst(){return numConst;}
+        void setnumconst(double numConst){this->numConst=numConst;}
+        string getstrConst(){return strConst;}
+        void setstrConst(string strConst){this->strConst=strConst;}
+        bool getboolConst(){return boolConst;}
+        void setboolConst(bool boolConst){this->boolConst=boolConst;}
         expr *getIndex(){return this->index;}
+        
         expr(exp_t type){
             this->type=type;
         }

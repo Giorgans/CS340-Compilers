@@ -28,7 +28,7 @@ expr *emit_iftableitem(expr *e){
     if(e->getType() != tableitem_e)
         return e;
     else{
-        expr *result = new expr(var_e);
+        expr *result = NULL;//new expr(var_e);
         //emit(tablegetelem,e,e->getIndex(),label,line);
         return result;
     }
@@ -71,7 +71,7 @@ void inccurrscopeoffset(void){
 
 void enterscopespace(void){++scopeSpaceCounter;}
 void exitscopespace(void){assert(scopeSpaceCounter>1);  --scopeSpaceCounter;}
-
+/*
 expr *lvalue_exp(Symbol *sym){
     assert(sym);
     expr *e;
@@ -83,4 +83,4 @@ expr *lvalue_exp(Symbol *sym){
     }
     return e;
 }
-
+*/
