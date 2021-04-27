@@ -47,7 +47,7 @@ bool isMember=false;
 %token <intValue> INTCONST
 %token <realValue> REALCONST
 %token <stringValue> STRING
-%type <expression> exp lvalue const
+%type <expression> exp lvalue const primary f_def
 /*Tokens for keywords*/
 %token IF ELSE WHILE FOR FUNCTION RETURN BREAK CONTINUE AND NOT OR LOCAL TRUE FALSE NIL
 /*Tokens for operators*/
@@ -80,7 +80,11 @@ stmt:  exp SEMICOLON
       | CONTINUE SEMICOLON {if(!loop_open) cout << "[Syntax Analysis] ERROR: Cannot use CONTINUE statement while not within loop, in line " << yylineno << endl;}
       | block | f_def | SEMICOLON ;
 
-exp: assign_exp | exp PLUS exp | exp MINUS exp | exp MULTIPLY exp | exp DIV exp | exp MOD exp 
+exp: assign_exp 
+    | exp PLUS exp{
+        $$ = new expr(arithexp_e);
+    } 
+    | exp MINUS exp | exp MULTIPLY exp | exp DIV exp | exp MOD exp 
     | exp LESS_THAN exp | exp GREATER_THAN exp | exp LESS_EQUAL exp | exp GREATER_EQUAL exp 
     | exp AND exp | exp OR exp | exp EQUAL exp | exp NOT_EQUAL exp  | term ;
 
@@ -117,7 +121,7 @@ assign_exp: lvalue ASSIGN exp {
         if(isMember) isMember=false;
 };
 
-primary: lvalue | call | obj_def | L_PARENTHESIS f_def R_PARENTHESIS | const ;
+primary: lvalue {$$=$1;}| call | obj_def | L_PARENTHESIS f_def R_PARENTHESIS | const {$$=$1;} ;
 
 lvalue: ID {
 
@@ -166,10 +170,14 @@ lvalue: ID {
 
     }
     |   DOUBLE_COLON ID { 
-            if(table.LookupScope($2,0)==NULL)
+            Symbol *symbol=table.LookupScope($2,0);
+            if(symbol==NULL)
                 cout << "[Syntax Analysis] ERROR: There is no declaration of global var \"" << $2 <<"\", in line " << yylineno << endl;  
-          
-            }
+            $$ = new expr(var_e);
+            $$->insertSymbol(symbol);
+
+            
+    }
 
                     
     |   member {isMember=true;};
@@ -203,18 +211,30 @@ f_def: FUNCTION ID{
                 cout<< "[Syntax Analysis] ERROR: Redefinition of \"" << $2 << "\" as function, in line " << yylineno << endl;
                 cout<< "\tNote: Previous definition of \""<< $2 << "\" in line " << symbol->getLine() << endl;
              }   
-            if(!scope && symbol->getType()==libraryfunc_s)
+            if(!scope && symbol->getType()==libraryfunc_s){
+                $$ = new expr(libraryfunc_e);
+                $$->insertSymbol(symbol);
                 cout << "[Syntax Analysis] ERROR: Collision with library function \"" << $2 << "\", in line " << yylineno << endl;                
+            }
             if(symbol!=NULL  && symbol->getType()==var_s){
                 cout << "[Syntax Analysis] ERROR: Redefinition of \"" << $2 << "\" as function, in line " << yylineno << endl;
                 cout<< "\tNote: Previous definition of \""<< $2 << "\" in line " << symbol->getLine() << endl;
             }
         }
-        else table.Insert($2,programfunc_s,scope,yylineno);
+        else{
+            table.Insert($2,programfunc_s,scope,yylineno);
+            $$ = new expr(programfunc_e);
+            $$->insertSymbol(table.LookupScope($2,scope));
+        }
     }
         L_PARENTHESIS {scope++;} idlist R_PARENTHESIS  { scope--; func_open++;} block {func_open--;}
         
-    |  FUNCTION { string fname = "_$" + to_string(func_id_num); func_id_num++;table.Insert(fname,programfunc_s,scope,yylineno);}
+    |  FUNCTION { 
+            string fname = "_$" + to_string(func_id_num); func_id_num++;table.Insert(fname,programfunc_s,scope,yylineno);
+            
+            $$ = new expr(programfunc_e);
+            $$->insertSymbol(table.LookupScope(fname,scope));
+        }
          L_PARENTHESIS {scope++;} idlist R_PARENTHESIS { scope--; func_open++;}  block{func_open--;};
 
 const: INTCONST { 
