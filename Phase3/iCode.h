@@ -100,3 +100,6 @@ expr *emit_iftableitem(expr *e);
 
 void expand(void);
 
+bool istempname(char* s);
+bool istempexpr(expr *e);
+

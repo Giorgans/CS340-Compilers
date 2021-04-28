@@ -4,14 +4,15 @@
 	 Iasonas Filippos Ntagiannis AM:3540 
      Compiled and run in Mac OS Big Sur 11.2.3 , x86 chip***/
 #include "SymbolTable_v2.h"
+#include "iCode.h"
 
 /*** Creates a new symbol and stores its address 
  *   to the HashTable and the list for each scope **/
 void SymbolTable::Insert(string name,symbol_t type,
                                         unsigned int scope,
                                         unsigned int line){
-    Symbol *newSymbol = new Symbol(type,name,scope,line);
-
+    Symbol *newSymbol = new Symbol(type,name,scope,line,currscopeoffset());
+    inccurrscopeoffset();
     unsigned int index = hash(name);
     if(HashTable[index]==NULL) HashTable[index] =  new list<Symbol>();
     HashTable[index]->push_back(*newSymbol);

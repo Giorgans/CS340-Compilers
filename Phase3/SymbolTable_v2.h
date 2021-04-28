@@ -32,10 +32,11 @@ typedef class Symbol {
         scopespace_t getSpace(){return space;}
         unsigned getScope(){return scope;}
         unsigned getLine(){return line;}
+        unsigned getOffset(){return offset;}
         bool IsActive(){return isActive;}
         void setInactive(){this->isActive=false;}
 
-        Symbol (symbol_t type,string name,unsigned scope,unsigned line){
+        Symbol (symbol_t type,string name,unsigned scope,unsigned line,unsigned offset){
             this->isActive=true;
             this->type=type;
             this->name.assign(name);

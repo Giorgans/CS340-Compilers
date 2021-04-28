@@ -9,6 +9,7 @@
 #define NEW_SIZE (EXPAND_SIZE*sizeof(quad)+CURR_SIZE)
 unsigned total = 0;
 unsigned int currQuad = 0;
+unsigned int tempVar = 0;
 
 quad *quads = (quad*) 0;
 
@@ -71,7 +72,10 @@ void inccurrscopeoffset(void){
 
 void enterscopespace(void){++scopeSpaceCounter;}
 void exitscopespace(void){assert(scopeSpaceCounter>1);  --scopeSpaceCounter;}
-/*
+
+bool istempname(string s){return s.at(0)=='_';}
+bool istempexpr(expr *e){return (e->getSymbol()) && (e->getSymbol()->getType() == var_s) && (istempname(e->getSymbol()->getName()));}
+
 expr *lvalue_exp(Symbol *sym){
     assert(sym);
     expr *e;
@@ -81,6 +85,7 @@ expr *lvalue_exp(Symbol *sym){
         case libraryfunc_s :   e = new expr(libraryfunc_e); break;
         default: assert(0);
     }
+    e->insertSymbol(sym);
     return e;
 }
-*/
+

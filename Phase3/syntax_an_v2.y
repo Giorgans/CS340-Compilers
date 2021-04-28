@@ -82,7 +82,7 @@ stmt:  exp SEMICOLON
 
 exp: assign_exp 
     | exp PLUS exp{
-        $$ = new expr(arithexp_e);
+       // $$ = new expr(arithexp_e);
     } 
     | exp MINUS exp | exp MULTIPLY exp | exp DIV exp | exp MOD exp 
     | exp LESS_THAN exp | exp GREATER_THAN exp | exp LESS_EQUAL exp | exp GREATER_EQUAL exp 
@@ -149,8 +149,8 @@ lvalue: ID {
                 
             }
             symbol=table.LookupScope($1,scope);
-            $$ = new expr(var_e);
-            $$->insertSymbol(symbol);
+            $$ = lvalue_exp(symbol);
+            
 
 }
     |   LOCAL ID {
@@ -165,16 +165,14 @@ lvalue: ID {
                 }   
             }
             symbol=table.LookupScope($2,scope);
-            $$ = new expr(var_e);
-            $$->insertSymbol(symbol);
+            $$ = lvalue_exp(symbol);
 
     }
     |   DOUBLE_COLON ID { 
             Symbol *symbol=table.LookupScope($2,0);
             if(symbol==NULL)
                 cout << "[Syntax Analysis] ERROR: There is no declaration of global var \"" << $2 <<"\", in line " << yylineno << endl;  
-            $$ = new expr(var_e);
-            $$->insertSymbol(symbol);
+            $$ = lvalue_exp(symbol);
 
             
     }
@@ -230,7 +228,7 @@ f_def: FUNCTION ID{
         L_PARENTHESIS {scope++;} idlist R_PARENTHESIS  { scope--; func_open++;} block {func_open--;}
         
     |  FUNCTION { 
-            string fname = "_$" + to_string(func_id_num); func_id_num++;table.Insert(fname,programfunc_s,scope,yylineno);
+            string fname = "n$" + to_string(func_id_num); func_id_num++;table.Insert(fname,programfunc_s,scope,yylineno);
             
             $$ = new expr(programfunc_e);
             $$->insertSymbol(table.LookupScope(fname,scope));
