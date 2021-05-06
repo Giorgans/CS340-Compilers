@@ -21,6 +21,7 @@ void emit(iopcode op,expr *arg1,expr *arg2,expr *result,unsigned label,unsigned 
    
     quad *p = quads+currQuad++;
     p = new quad(op,arg1,arg2,result,label,line);
+
 }
 
 expr *emit_iftableitem(expr *e){

@@ -114,6 +114,7 @@ expr *lvalue_exp(Symbol *sym);
 
 /*Temp hidden variable related functions*/
 string newtempname();
+Symbol *newtemp();
 void resettemp();
 bool istempname(char* s);
 bool istempexpr(expr *e);

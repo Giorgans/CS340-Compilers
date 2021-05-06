@@ -83,7 +83,9 @@ stmt:  exp SEMICOLON
 
 exp: assign_exp 
     | exp PLUS exp{
-       // $$ = new expr(arithexp_e);
+       $$ = new expr(arithexp_e);
+       $$->insertSymbol(newtemp());
+       emit(add, $1, $3, $$,0,yylineno);
     } 
     | exp MINUS exp | exp MULTIPLY exp | exp DIV exp | exp MOD exp 
     | exp LESS_THAN exp | exp GREATER_THAN exp | exp LESS_EQUAL exp | exp GREATER_EQUAL exp 
@@ -319,7 +321,8 @@ int main(int argc, char **argv) {
     cout << "-----------------------------------------------------------------------" << endl;
 
   table.printSymbols();
-  
+    
+
 
   return 0; 
 }
