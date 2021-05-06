@@ -5,6 +5,7 @@
      Compiled and run in Mac OS Big Sur 11.2.3 , x86 chip***/
 #include "SymbolTable_v2.h"
 
+/* Opcode type for Quad class*/
 typedef enum iopcode {
     assign, add, sub,
     mul, div, mod,
@@ -17,6 +18,7 @@ typedef enum iopcode {
     tablegetelem, tablesetelem
 }iopcode;
 
+/* Types for the expression class*/
 typedef enum exp_t {
     var_e,
     tableitem_e,
@@ -36,6 +38,7 @@ typedef enum exp_t {
     nil_e
 }exp_t;
 
+/* Expression class being a possible part for a Quad*/
 typedef class expr{
     private:
         exp_t type;
@@ -61,6 +64,7 @@ typedef class expr{
         }
 }expr;
 
+/* Quad class cointaining a operation code , two arguments and the result as expressions*/
 typedef class quad{
     private:
         iopcode op;
@@ -86,20 +90,32 @@ typedef class quad{
         }
 }quad;
 
+/* Quad related functions and variables*/
+void emit(iopcode op,expr *arg1,expr *arg2,expr *result,unsigned label,unsigned line);
+expr *emit_iftableitem(expr *e);
+void expand(void);
+/************************************************/
+
+
+/* Scope space related functions */
 scopespace_t currscopespace(void);
-unsigned currscopeoffset(void);
-void inccurrscopeoffset(void);
 void enterscopespace(void);
 void exitscopespace(void);
+/************************************************/
+
+/****   Offset related functions               */
+unsigned currscopeoffset(void);
+void inccurrscopeoffset(void);
+/************************************************/
+
 
 expr *lvalue_exp(Symbol *sym);
 
-void emit(iopcode op,expr *arg1,expr *arg2,expr *result,unsigned label,unsigned line);
 
-expr *emit_iftableitem(expr *e);
-
-void expand(void);
-
+/*Temp hidden variable related functions*/
+string newtempname();
+void resettemp();
 bool istempname(char* s);
 bool istempexpr(expr *e);
+/************************************************/
 

@@ -36,10 +36,11 @@ typedef class Symbol {
         bool IsActive(){return isActive;}
         void setInactive(){this->isActive=false;}
 
-        Symbol (symbol_t type,string name,unsigned scope,unsigned line,unsigned offset){
+        Symbol (symbol_t type,string name,scopespace_t space,unsigned scope,unsigned line,unsigned offset){
             this->isActive=true;
             this->type=type;
             this->name.assign(name);
+            this->space=space;
             this->scope=scope;
             this->line=line;
         }

@@ -47,7 +47,8 @@ bool isMember=false;
 %token <intValue> INTCONST
 %token <realValue> REALCONST
 %token <stringValue> STRING
-%type <expression> exp lvalue const primary f_def
+/*Tokens for expressions*/
+%type <expression> exp lvalue const primary f_def member assign_exp term obj_def
 /*Tokens for keywords*/
 %token IF ELSE WHILE FOR FUNCTION RETURN BREAK CONTINUE AND NOT OR LOCAL TRUE FALSE NIL
 /*Tokens for operators*/

@@ -11,7 +11,7 @@
 void SymbolTable::Insert(string name,symbol_t type,
                                         unsigned int scope,
                                         unsigned int line){
-    Symbol *newSymbol = new Symbol(type,name,scope,line,currscopeoffset());
+    Symbol *newSymbol = new Symbol(type,name,currscopespace(),scope,line,currscopeoffset());
     inccurrscopeoffset();
     unsigned int index = hash(name);
     if(HashTable[index]==NULL) HashTable[index] =  new list<Symbol>();

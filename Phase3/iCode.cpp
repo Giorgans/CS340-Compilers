@@ -7,16 +7,14 @@
 #define EXPAND_SIZE 1024
 #define CURR_SIZE (total*sizeof(quad))
 #define NEW_SIZE (EXPAND_SIZE*sizeof(quad)+CURR_SIZE)
+extern SymbolTable table;
+extern int yylineno,scope;
+
+/* Quad related functions and variables*/
 unsigned total = 0;
 unsigned int currQuad = 0;
 unsigned int tempVar = 0;
-
 quad *quads = (quad*) 0;
-
-unsigned programVarOffset = 0;
-unsigned functionLocalOffset = 0;
-unsigned formalArgOffset = 0;
-unsigned scopeSpaceCounter = 1;
 
 void emit(iopcode op,expr *arg1,expr *arg2,expr *result,unsigned label,unsigned line){
     if(currQuad==total) expand();
@@ -45,12 +43,40 @@ void expand(void){
     quads = p;
     total += EXPAND_SIZE;
 }
+/************************************************/
+
+/* Expression related functions */
+expr *lvalue_exp(Symbol *sym){
+    assert(sym);
+    expr *e;
+    switch(sym->getType()){
+        case var_s :   e = new expr(var_e); break;
+        case programfunc_s :   e = new expr(programfunc_e); break;
+        case libraryfunc_s :   e = new expr(libraryfunc_e); break;
+        default: assert(0);
+    }
+    e->insertSymbol(sym);
+    return e;
+}
+/************************************************/
+
+/* Scope space related functions and variables */
+unsigned scopeSpaceCounter = 1;
 
 scopespace_t currscopespace(void){
     if(scopeSpaceCounter == 1) return programvar;
     else if(!(scopeSpaceCounter % 2)) return formalarg;
     else return functionlocal;
 }
+
+void enterscopespace(void){++scopeSpaceCounter;}
+void exitscopespace(void){assert(scopeSpaceCounter>1);  --scopeSpaceCounter;}
+/************************************************/
+
+/*   Offset related functions and variables     */
+unsigned programVarOffset = 0;
+unsigned functionLocalOffset = 0;
+unsigned formalArgOffset = 0;
 
 unsigned currscopeoffset(void){
     switch(currscopespace()){
@@ -69,23 +95,26 @@ void inccurrscopeoffset(void){
         default : assert(0);
     }
 }
+/************************************************/
 
-void enterscopespace(void){++scopeSpaceCounter;}
-void exitscopespace(void){assert(scopeSpaceCounter>1);  --scopeSpaceCounter;}
 
-bool istempname(string s){return s.at(0)=='_';}
+/*Temp hidden variable related functions*/
+int tempcounter = 0;
+
+string newtempname() { return "@t" + to_string(tempcounter); } 
+
+void resettemp() { tempcounter = 0; } 
+
+Symbol *newtemp() {
+    string name = newtempname();
+    Symbol *sym = table.LookupScope(name,scope); 
+    if (sym == NULL) return new Symbol(var_s,name,currscopespace(),scope,yylineno,currscopeoffset());
+    else return sym;
+}
+
+bool istempname(string s){return s.at(0)=='@';}
 bool istempexpr(expr *e){return (e->getSymbol()) && (e->getSymbol()->getType() == var_s) && (istempname(e->getSymbol()->getName()));}
 
-expr *lvalue_exp(Symbol *sym){
-    assert(sym);
-    expr *e;
-    switch(sym->getType()){
-        case var_s :   e = new expr(var_e); break;
-        case programfunc_s :   e = new expr(programfunc_e); break;
-        case libraryfunc_s :   e = new expr(libraryfunc_e); break;
-        default: assert(0);
-    }
-    e->insertSymbol(sym);
-    return e;
-}
+
+/************************************************/
 
