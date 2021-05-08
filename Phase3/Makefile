@@ -12,7 +12,7 @@ RUN=./
 REM=rm -f
 
 all:	lexical_analyzer.cpp syntax_analyzer.cpp SymbolTable_v2.cpp iCode.cpp
-	$(CC) $(OFLAGS) syntax_analyzer lexical_analyzer.cpp syntax_analyzer.cpp SymbolTable_v2.cpp iCode.cpp
+	$(CC) $(OFLAGS) alpha_icode lexical_analyzer.cpp syntax_analyzer.cpp SymbolTable_v2.cpp iCode.cpp
 
 lexical_analyzer.cpp:	lex_an_v2.l
 	$(FL)  lex_an_v2.l
@@ -20,6 +20,6 @@ lexical_analyzer.cpp:	lex_an_v2.l
 syntax_analyzer.cpp:	syntax_an_v2.y
 	$(BS) $(BSFLAGS)  syntax_an_v2.y
 
-clean:  syntax_analyzer.cpp lexical_analyzer.cpp parser.h syntax_analyzer.output syntax_analyzer
-	$(REM)   syntax_analyzer.cpp lexical_analyzer.cpp parser.h syntax_analyzer.output syntax_analyzer
+clean:  syntax_analyzer.cpp lexical_analyzer.cpp parser.h alpha_icode.output alpha_icode
+	$(REM)   syntax_analyzer.cpp lexical_analyzer.cpp parser.h alpha_icode.output alpha_icode
 

@@ -3,12 +3,13 @@
 	 Stylianos Michelakakis AM:3524
 	 Iasonas Filippos Ntagiannis AM:3540 
      Compiled and run in Mac OS Big Sur 11.2.3 , x86 chip***/
-#include "SymbolTable_v2.h"
 
+#include "SymbolTable_v2.h"
+#include <vector>
 /* Opcode type for Quad class*/
 typedef enum iopcode {
     assign, add, sub,
-    mul, div, mod,
+    mul, divide, mod,
     uminus, andb, orb,
     notb, if_eq, if_noteq,
     if_lesseq, if_greatereq, if_less,
@@ -94,6 +95,7 @@ typedef class quad{
 void emit(iopcode op,expr *arg1,expr *arg2,expr *result,unsigned label,unsigned line);
 expr *emit_iftableitem(expr *e);
 void expand(void);
+void print_quads();
 /************************************************/
 
 

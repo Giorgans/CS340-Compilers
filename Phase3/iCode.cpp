@@ -4,24 +4,20 @@
 	 Iasonas Filippos Ntagiannis AM:3540 
      Compiled and run in Mac OS Big Sur 11.2.3 , x86 chip***/
 #include "iCode.h"
-#define EXPAND_SIZE 1024
-#define CURR_SIZE (total*sizeof(quad))
-#define NEW_SIZE (EXPAND_SIZE*sizeof(quad)+CURR_SIZE)
+//#define EXPAND_SIZE 1024
+//#define CURR_SIZE (total*sizeof(quad))
+//#define NEW_SIZE (EXPAND_SIZE*sizeof(quad)+CURR_SIZE)
 extern SymbolTable table;
 extern int yylineno,scope;
 
-/* Quad related functions and variables*/
+/***   Quad related functions and variables */
 unsigned total = 0;
 unsigned int currQuad = 0;
 unsigned int tempVar = 0;
-quad *quads = (quad*) 0;
+vector <quad> quads;
 
 void emit(iopcode op,expr *arg1,expr *arg2,expr *result,unsigned label,unsigned line){
-    if(currQuad==total) expand();
-   
-    quad *p = quads+currQuad++;
-    p = new quad(op,arg1,arg2,result,label,line);
-
+    quads.push_back(quad(op,result,arg1,arg2,label,line));
 }
 
 expr *emit_iftableitem(expr *e){
@@ -33,16 +29,40 @@ expr *emit_iftableitem(expr *e){
         return result;
     }
 }
-
+/*
 void expand(void){
     assert(total==currQuad);
-    quad *p = (quad*) malloc(NEW_SIZE);
+    quad *p = new quad[NEW_SIZE];
     if(quads){
         memcpy(p,quads,CURR_SIZE);
         free(quads);
     }
     quads = p;
     total += EXPAND_SIZE;
+}
+*/
+void print_quads(){
+
+    int count=1;
+    cout <<  "-----------------------------------------------------------------------" << endl;
+    cout <<  "-----------------------------------------------------------------------" << endl;
+    cout <<  "quad#\topcode\t\tresult\t\targ1\t\targ2\tlabel" << endl;
+    cout <<  "-----------------------------------------------------------------------" << endl;
+    for(vector <quad>::iterator i=quads.begin() ;i!=quads.end() ;i++){
+        cout << count << ":\t" ;
+
+        if(i->getOp()==add) cout << "add\t\t";
+        if(i->getOp()==sub) cout << "sub\t\t";
+        if(i->getOp()==mul) cout << "mul\t\t";
+        if(i->getOp()==divide) cout << "divide\t\t";
+        if(i->getOp()==mod) cout << "mod\t\t";
+
+        if(i->getResult()) cout << i->getResult()->getSymbol()->getName() << "\t\t" ;
+        if(i->getArg1())   cout << i->getArg1()->getnumconst() << "\t\t" ;
+        if(i->getArg2())   cout << i->getArg2()->getnumconst() << endl;
+
+    }
+    cout <<  "-----------------------------------------------------------------------" << endl;
 }
 /************************************************/
 
@@ -99,7 +119,7 @@ void inccurrscopeoffset(void){
 /************************************************/
 
 
-/*Temp hidden variable related functions*/
+/*     Temp hidden variable related functions   */
 int tempcounter = 0;
 
 string newtempname() { return "@t" + to_string(tempcounter); } 
@@ -109,7 +129,11 @@ void resettemp() { tempcounter = 0; }
 Symbol *newtemp() {
     string name = newtempname();
     Symbol *sym = table.LookupScope(name,scope); 
-    if (sym == NULL) return new Symbol(var_s,name,currscopespace(),scope,yylineno,currscopeoffset());
+    if (sym == NULL){
+        sym = new Symbol(var_s,name,currscopespace(),scope,yylineno,currscopeoffset());
+        table.Insert(sym);
+        return sym;
+    } 
     else return sym;
 }
 

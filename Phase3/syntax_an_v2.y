@@ -75,7 +75,7 @@ program: stmts ;
 
 stmts: stmts stmt | ;
 
-stmt:  exp SEMICOLON 
+stmt:  exp SEMICOLON  {resettemp();}
       |  if_stmt | {loop_open++;} while_stmt {loop_open--;} | {loop_open++;} for_stmt {loop_open--;} | ret_stmt 
       | BREAK SEMICOLON {if(!loop_open) cout << "[Syntax Analysis] ERROR: Cannot use BREAK statement while not within loop, in line " << yylineno << endl;}
       | CONTINUE SEMICOLON {if(!loop_open) cout << "[Syntax Analysis] ERROR: Cannot use CONTINUE statement while not within loop, in line " << yylineno << endl;}
@@ -87,9 +87,67 @@ exp: assign_exp
        $$->insertSymbol(newtemp());
        emit(add, $1, $3, $$,0,yylineno);
     } 
-    | exp MINUS exp | exp MULTIPLY exp | exp DIV exp | exp MOD exp 
-    | exp LESS_THAN exp | exp GREATER_THAN exp | exp LESS_EQUAL exp | exp GREATER_EQUAL exp 
-    | exp AND exp | exp OR exp | exp EQUAL exp | exp NOT_EQUAL exp  | term ;
+    | exp MINUS exp{
+       $$ = new expr(arithexp_e);
+       $$->insertSymbol(newtemp());
+       emit(sub, $1, $3, $$,0,yylineno);
+    } 
+    | exp MULTIPLY exp{
+       $$ = new expr(arithexp_e);
+       $$->insertSymbol(newtemp());
+       emit(mul, $1, $3, $$,0,yylineno);
+    }
+    | exp DIV exp{
+       $$ = new expr(arithexp_e);
+       $$->insertSymbol(newtemp());
+       emit(divide, $1, $3, $$,0,yylineno);
+    }
+    | exp MOD exp{
+       $$ = new expr(arithexp_e);
+       $$->insertSymbol(newtemp());
+       emit(mod, $1, $3, $$, 0, yylineno);
+    }
+    | exp LESS_THAN exp{
+       $$ = new expr(boolexp_e);
+       $$->insertSymbol(newtemp());
+       emit(if_less, $1, $3, $$, 0, yylineno);
+    }
+    | exp GREATER_THAN exp{
+       $$ = new expr(boolexp_e);
+       $$->insertSymbol(newtemp());
+       emit(if_greater, $1, $3, $$, 0, yylineno);
+    }
+    | exp LESS_EQUAL exp{
+       $$ = new expr(boolexp_e);
+       $$->insertSymbol(newtemp());
+       emit(if_lesseq, $1, $3, $$, 0, yylineno);
+    }
+    | exp GREATER_EQUAL exp {
+       $$ = new expr(boolexp_e);
+       $$->insertSymbol(newtemp());
+       emit(if_greatereq, $1, $3, $$, 0, yylineno);
+    }
+    | exp AND exp {
+       $$ = new expr(boolexp_e);
+       $$->insertSymbol(newtemp());
+       emit(andb, $1, $3, $$, 0, yylineno);
+    }
+    | exp OR exp {
+       $$ = new expr(boolexp_e);
+       $$->insertSymbol(newtemp());
+       emit(orb, $1, $3, $$, 0, yylineno);
+    }
+    | exp EQUAL exp{
+       $$ = new expr(boolexp_e);
+       $$->insertSymbol(newtemp());
+       emit(if_eq, $1, $3, $$, 0, yylineno);
+    }
+    | exp NOT_EQUAL exp{
+       $$ = new expr(boolexp_e);
+       $$->insertSymbol(newtemp());
+       emit(notb, $1, $3, $$, 0, yylineno);
+    } 
+    | term {$$=$1;};
 
 
 term: L_PARENTHESIS exp R_PARENTHESIS | MINUS exp %prec UMINUS | NOT exp 
@@ -109,7 +167,7 @@ term: L_PARENTHESIS exp R_PARENTHESIS | MINUS exp %prec UMINUS | NOT exp
         Symbol *symbol=table.Lookup($1->getSymbol()->getName());
         if(symbol->getType()==programfunc_s || symbol->getType()==libraryfunc_s)
             cout <<"[Syntax Analysis] ERROR: Trying to right decrease the function \"" << $1 << "\" by 1, in line " << yylineno << endl;}
-    | primary  ;
+    | primary {$$=$1;} ;
 
 assign_exp: lvalue ASSIGN exp {
     Symbol *symbol;
@@ -143,7 +201,7 @@ lvalue: ID {
             }
 
             if(!found){
-                table.Insert($1,var_s,scope,yylineno);
+                table.Insert(new Symbol(var_s,$1,currscopespace(),scope,yylineno,currscopeoffset()));
             }
             else{
                 temp=table.LookupScope($1,temp_scope);
@@ -164,7 +222,7 @@ lvalue: ID {
                 if(temp!=NULL && temp->getType()==libraryfunc_s)
                     cout << "[Syntax Analysis] ERROR: Collision with library function \""<< $2 << "\", in line " << yylineno << endl;                
                 else{
-                    table.Insert($2,var_s,scope,yylineno);
+                    table.Insert(new Symbol(var_s,$2,currscopespace(),scope,yylineno,currscopeoffset()));
                 }   
             }
             symbol=table.LookupScope($2,scope);
@@ -223,7 +281,7 @@ f_def: FUNCTION ID{
             }
         }
         else{
-            table.Insert($2,programfunc_s,scope,yylineno);
+            table.Insert(new Symbol(programfunc_s,$2,currscopespace(),scope,yylineno,currscopeoffset()));
             $$ = new expr(programfunc_e);
             $$->insertSymbol(table.LookupScope($2,scope));
         }
@@ -231,7 +289,7 @@ f_def: FUNCTION ID{
         L_PARENTHESIS {scope++;} idlist R_PARENTHESIS  { scope--; func_open++;} block {func_open--;}
         
     |  FUNCTION { 
-            string fname = "n$" + to_string(func_id_num); func_id_num++;table.Insert(fname,programfunc_s,scope,yylineno);
+            string fname = "n$" + to_string(func_id_num); func_id_num++; table.Insert(new Symbol(programfunc_s,fname,currscopespace(),scope,yylineno,currscopeoffset()));
             
             $$ = new expr(programfunc_e);
             $$->insertSymbol(table.LookupScope(fname,scope));
@@ -273,7 +331,7 @@ idlist: ID {
          temp=table.LookupScope($1,0);
          if(temp!=NULL && temp->getType()==libraryfunc_s)
             cout << "[Syntax Analysis] ERROR: Collision with library function \""<< $1 << "\", in line " << yylineno << endl;                
-          else table.Insert($1,var_s,scope,yylineno);
+          else table.Insert(new Symbol(var_s,$1,currscopespace(),scope,yylineno,currscopeoffset()));
     }
 }
     | idlist COMMA ID {
@@ -287,7 +345,7 @@ idlist: ID {
         if(temp!=NULL && temp->getType()==libraryfunc_s)
             cout << "[Syntax Analysis] ERROR: Collision with library function \""<< $3 << "\", in line " << yylineno << endl;                
         else 
-            table.Insert($3,var_s,scope,yylineno);
+            table.Insert(new Symbol(var_s,$3,currscopespace(),scope,yylineno,currscopeoffset()));
     }
     }
     | ;
@@ -321,7 +379,7 @@ int main(int argc, char **argv) {
     cout << "-----------------------------------------------------------------------" << endl;
 
   table.printSymbols();
-    
+  print_quads();
 
 
   return 0; 

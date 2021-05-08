@@ -8,19 +8,17 @@
 
 /*** Creates a new symbol and stores its address 
  *   to the HashTable and the list for each scope **/
-void SymbolTable::Insert(string name,symbol_t type,
-                                        unsigned int scope,
-                                        unsigned int line){
-    Symbol *newSymbol = new Symbol(type,name,currscopespace(),scope,line,currscopeoffset());
+void SymbolTable::Insert(Symbol *sym){
+    Symbol *newSymbol = sym;
     inccurrscopeoffset();
-    unsigned int index = hash(name);
+    unsigned int index = hash(sym->getName());
     if(HashTable[index]==NULL) HashTable[index] =  new list<Symbol>();
     HashTable[index]->push_back(*newSymbol);
 
     list<ScopeLists>::iterator i;
     bool scopefound=false;
     for (i=scopelists.begin() ; i!=scopelists.end() ; i++){
-        if(i->getScope()==scope) { 
+        if(i->getScope()==sym->getScope()) { 
             i->getList()->push_back(*newSymbol);
             scopefound=true;
         }
@@ -29,16 +27,16 @@ void SymbolTable::Insert(string name,symbol_t type,
     if(!scopefound) {
         list<ScopeLists>::iterator current,next=scopelists.begin();
         if(scopelists.empty())
-            scopelists.push_back(*(new ScopeLists(scope,newSymbol)));
+            scopelists.push_back(*(new ScopeLists(sym->getScope(),newSymbol)));
         else{
             next++;
             for(current=scopelists.begin(); current!=scopelists.end(); current++){
-                if(current->getScope()<scope && next==scopelists.end()){ 
-                    scopelists.push_back(*(new ScopeLists(scope,newSymbol)));
+                if(current->getScope()<sym->getScope() && next==scopelists.end()){ 
+                    scopelists.push_back(*(new ScopeLists(sym->getScope() ,newSymbol)));
                     break;
                 }
-                else if(current->getScope()<scope && next->getScope()>scope){
-                    scopelists.insert(next,*(new ScopeLists(scope,newSymbol)));
+                else if(current->getScope()<sym->getScope()  && next->getScope()>sym->getScope() ){
+                    scopelists.insert(next,*(new ScopeLists(sym->getScope() ,newSymbol)));
                     break;
                 }
                 next++;

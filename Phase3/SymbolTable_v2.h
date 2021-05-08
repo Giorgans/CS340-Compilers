@@ -68,7 +68,7 @@ typedef class SymbolTable {
         list <ScopeLists> scopelists;
         unsigned int hash(string name);
     public:
-        void Insert(string name,enum symbol_t type,unsigned int scope,unsigned int line);
+        void Insert(Symbol *sym);
         Symbol* Lookup(string name); 
         Symbol* LookupScope(string name,unsigned int scope);
         void Hide(unsigned int scope);
@@ -76,19 +76,19 @@ typedef class SymbolTable {
     SymbolTable(){
         for (int i=0 ;i<BUCKETS ; ++i)
             this->HashTable[i] = NULL;
-
-        this->Insert("print",libraryfunc_s,0,0);
-        this->Insert("input",libraryfunc_s,0,0);
-        this->Insert("objectmemberkeys",libraryfunc_s,0,0);
-        this->Insert("objecttotalmembers",libraryfunc_s,0,0);
-        this->Insert("objectcopy",libraryfunc_s,0,0);
-        this->Insert("totalarguments",libraryfunc_s,0,0);
-        this->Insert("argument",libraryfunc_s,0,0);
-        this->Insert("typeof",libraryfunc_s,0,0);
-        this->Insert("strtonum",libraryfunc_s,0,0);
-        this->Insert("sqrt",libraryfunc_s,0,0);
-        this->Insert("cos",libraryfunc_s,0,0);
-        this->Insert("sin",libraryfunc_s,0,0);
+        this->Insert(new Symbol(libraryfunc_s,"print",programvar,0,0,0));
+        this->Insert(new Symbol(libraryfunc_s,"input",programvar,0,0,0));
+        this->Insert(new Symbol(libraryfunc_s,"objectmemberkeys",programvar,0,0,0));
+        this->Insert(new Symbol(libraryfunc_s,"objecttotalmembers",programvar,0,0,0));
+        this->Insert(new Symbol(libraryfunc_s,"objectcopy",programvar,0,0,0));
+        this->Insert(new Symbol(libraryfunc_s,"totalarguments",programvar,0,0,0));
+        this->Insert(new Symbol(libraryfunc_s,"argument",programvar,0,0,0));
+        this->Insert(new Symbol(libraryfunc_s,"typeof",programvar,0,0,0));
+        this->Insert(new Symbol(libraryfunc_s,"strtonum",programvar,0,0,0));
+        this->Insert(new Symbol(libraryfunc_s,"sqrt",programvar,0,0,0));
+        this->Insert(new Symbol(libraryfunc_s,"cos",programvar,0,0,0));
+        this->Insert(new Symbol(libraryfunc_s,"sin",programvar,0,0,0));
     }
 }SymbolTable;
+
 #endif
