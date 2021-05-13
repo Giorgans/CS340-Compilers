@@ -2,7 +2,8 @@
      Georgios Zervos AM:3384
 	 Stylianos Michelakakis AM:3524
 	 Iasonas Filippos Ntagiannis AM:3540 
-     Compiled and run in Mac OS Big Sur 11.2.3 , x86 chip***/
+     Compiled and run in Mac OS Big Sur 11.3.1 , x86 chip***/
+
 #include "iCode.h"
 //#define EXPAND_SIZE 1024
 //#define CURR_SIZE (total*sizeof(quad))
@@ -11,7 +12,7 @@ extern SymbolTable table;
 extern int yylineno,scope;
 
 /***   Quad related functions and variables */
-unsigned total = 0;
+//unsigned total = 0;
 unsigned int currQuad = 0;
 unsigned int tempVar = 0;
 vector <quad> quads;
@@ -41,6 +42,16 @@ void expand(void){
     total += EXPAND_SIZE;
 }
 */
+
+void backpatchlabel(vector <unsigned> list, unsigned label){
+	
+	for(unsigned i=0 ; i<list.size() ; i++ ){
+		assert( list.at(i) < currQuad );
+        quads.at(list.at(i)).setLabel(label);
+
+	}
+}
+
 void print_quads(){
 
     int count=1;
@@ -50,17 +61,37 @@ void print_quads(){
     cout <<  "-----------------------------------------------------------------------" << endl;
     for(vector <quad>::iterator i=quads.begin() ;i!=quads.end() ;i++){
         cout << count << ":\t" ;
+        if(i->getOp()==assign){
+            cout << "assign\t\t";
 
-        if(i->getOp()==add) cout << "add\t\t";
+            if(i->getResult()->getSymbol())
+                cout << i->getResult()->getSymbol()->getName() << "\t\t";
+       
+
+            if(i->getArg1()->getSymbol())
+                cout << i->getArg1()->getSymbol()->getName();
+            else if(i->getArg1()->getType() == costnum_e)
+                cout << i->getArg1()->getnumconst() << "\t\t";
+            else if(i->getArg1()->getType() == conststring_e)
+                cout << i->getArg1()->getstrConst() << "\t\t";
+            else if(i->getArg1()->getType() == constbool_e){
+                if(i->getArg1()->getboolConst()) cout << "'true'\t\t" ;
+                else    cout << "'false'\t\t" ;
+            }
+        }
+        if(i->getOp()==add){ 
+            cout << "add\t\t";
+            if(i->getResult()) cout << i->getResult()->getSymbol()->getName() << "\t\t" ;
+            if(i->getArg1())   cout << i->getArg1()->getnumconst() << "\t\t" ;
+            if(i->getArg2())   cout << i->getArg2()->getnumconst() ;
+        }
         if(i->getOp()==sub) cout << "sub\t\t";
         if(i->getOp()==mul) cout << "mul\t\t";
         if(i->getOp()==divide) cout << "divide\t\t";
         if(i->getOp()==mod) cout << "mod\t\t";
 
-        if(i->getResult()) cout << i->getResult()->getSymbol()->getName() << "\t\t" ;
-        if(i->getArg1())   cout << i->getArg1()->getnumconst() << "\t\t" ;
-        if(i->getArg2())   cout << i->getArg2()->getnumconst() << endl;
-
+        count++;
+        cout << endl;
     }
     cout <<  "-----------------------------------------------------------------------" << endl;
 }
@@ -128,6 +159,7 @@ void resettemp() { tempcounter = 0; }
 
 Symbol *newtemp() {
     string name = newtempname();
+    tempcounter++;
     Symbol *sym = table.LookupScope(name,scope); 
     if (sym == NULL){
         sym = new Symbol(var_s,name,currscopespace(),scope,yylineno,currscopeoffset());

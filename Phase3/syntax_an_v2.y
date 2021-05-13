@@ -3,7 +3,7 @@
      Georgios Zervos AM:3384
 	 Stylianos Michelakakis AM:3524
 	 Iasonas Filippos Ntagiannis AM:3540 
-     Compiled and run in Mac OS Big Sur 11.2.3 , x86 chip***/
+     Compiled and run in Mac OS Big Sur 11.3.1 , x86 chip***/
 #include <iostream>
 #include <string>
 #include <sstream>
@@ -44,7 +44,7 @@ bool isMember=false;
 %output="syntax_analyzer.cpp"
 
 %token <stringValue> ID
-%token <intValue> INTCONST
+%token <intValue> INTCONST M
 %token <realValue> REALCONST
 %token <stringValue> STRING
 /*Tokens for expressions*/
@@ -56,17 +56,17 @@ bool isMember=false;
 /*Tokens for punctuators*/
 %token L_BRACE R_BRACE L_PARENTHESIS R_PARENTHESIS L_BRACKET R_BRACKET SEMICOLON COMMA COLON DOUBLE_COLON DOT DOUBLE_DOT 
 
-%left L_PARENTHESIS R_PARENTHESIS
-%left L_BRACKET R_BRACKET
-%left DOT DOUBLE_DOT
-%right NOT PLUS_PLUS MINUS_MINUS UMINUS
-%left  MULTIPLY DIV MOD
-%left  PLUS MINUS
-%nonassoc GREATER_THAN GREATER_EQUAL LESS_THAN LESS_EQUAL
-%nonassoc EQUAL NOT_EQUAL
-%left AND
-%left OR
 %right ASSIGN
+%left OR
+%left AND
+%nonassoc EQUAL NOT_EQUAL
+%nonassoc GREATER_THAN GREATER_EQUAL LESS_THAN LESS_EQUAL
+%left  PLUS MINUS
+%left  MULTIPLY DIV MOD
+%right NOT PLUS_PLUS MINUS_MINUS UMINUS
+%left DOT DOUBLE_DOT
+%left L_BRACKET R_BRACKET
+%left L_PARENTHESIS R_PARENTHESIS
 %nonassoc ELSE
 
 %%
@@ -81,7 +81,7 @@ stmt:  exp SEMICOLON  {resettemp();}
       | CONTINUE SEMICOLON {if(!loop_open) cout << "[Syntax Analysis] ERROR: Cannot use CONTINUE statement while not within loop, in line " << yylineno << endl;}
       | block | f_def | SEMICOLON ;
 
-exp: assign_exp 
+exp: assign_exp {$$=$1;}
     | exp PLUS exp{
        $$ = new expr(arithexp_e);
        $$->insertSymbol(newtemp());
@@ -180,6 +180,12 @@ assign_exp: lvalue ASSIGN exp {
                 cout << "[Syntax Analysis] ERROR: Trying to assign a value to \"" << $1 << "\" user function, in line "<< yylineno << endl;
         }  
         if(isMember) isMember=false;
+
+        emit(assign,$3,NULL,$1,0,yylineno);
+        $$ = new expr(assignexp_e);
+        $$->insertSymbol(newtemp());
+        emit(assign,$1,NULL,$$,0,yylineno);
+
 };
 
 primary: lvalue {$$=$1;}| call | obj_def | L_PARENTHESIS f_def R_PARENTHESIS | const {$$=$1;} ;
@@ -298,15 +304,15 @@ f_def: FUNCTION ID{
 
 const: INTCONST { 
                     $$ = new expr(costnum_e);
-                    $$->setnumconst(stoi(yytext));
+                    $$->setnumconst($1);
                 }   
     | REALCONST {
                     $$ = new expr(costnum_e);
-                    $$->setnumconst(stoi(yytext));
+                    $$->setnumconst($1);
                 }
        | STRING {
                     $$ = new expr(conststring_e);
-                    $$->setstrConst(yytext);
+                    $$->setstrConst($1);
 
                 }
         | NIL  {

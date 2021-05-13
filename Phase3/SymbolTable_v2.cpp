@@ -2,7 +2,7 @@
      Georgios Zervos AM:3384
 	 Stylianos Michelakakis AM:3524
 	 Iasonas Filippos Ntagiannis AM:3540 
-     Compiled and run in Mac OS Big Sur 11.2.3 , x86 chip***/
+     Compiled and run in Mac OS Big Sur 11.3.1 , x86 chip***/
 #include "SymbolTable_v2.h"
 #include "iCode.h"
 

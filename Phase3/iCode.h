@@ -2,10 +2,12 @@
      Georgios Zervos AM:3384
 	 Stylianos Michelakakis AM:3524
 	 Iasonas Filippos Ntagiannis AM:3540 
-     Compiled and run in Mac OS Big Sur 11.2.3 , x86 chip***/
+     Compiled and run in Mac OS Big Sur 11.3.1 , x86 chip ***/
 
 #include "SymbolTable_v2.h"
 #include <vector>
+#include <list>
+
 /* Opcode type for Quad class*/
 typedef enum iopcode {
     assign, add, sub,
@@ -48,6 +50,7 @@ typedef class expr{
         double numConst;
         string strConst;
         bool boolConst;
+        vector <unsigned> truelist,falselist;
     public:
         exp_t getType(){return this->type;}
         Symbol *getSymbol(){return this->sym;}
@@ -59,6 +62,8 @@ typedef class expr{
         bool getboolConst(){return boolConst;}
         void setboolConst(bool boolConst){this->boolConst=boolConst;}
         expr *getIndex(){return this->index;}
+        vector <unsigned> getTrueList(){return truelist;}
+        vector <unsigned> getFalseList(){return falselist;}
         
         expr(exp_t type){
             this->type=type;
@@ -80,6 +85,7 @@ typedef class quad{
         expr *getArg1(){return this->arg1;}
         expr *getArg2(){return this->arg2;}
         unsigned getLabel(){return this->label;}
+        void setLabel(unsigned label){this->label=label;}
         unsigned getLine(){return this->line;}
         quad(iopcode op,expr *result,expr *arg1,expr *arg2,unsigned label,unsigned line){
             this->op=op;
@@ -95,6 +101,7 @@ typedef class quad{
 void emit(iopcode op,expr *arg1,expr *arg2,expr *result,unsigned label,unsigned line);
 expr *emit_iftableitem(expr *e);
 void expand(void);
+void backpatchlabel(vector <unsigned> list, unsigned label);
 void print_quads();
 /************************************************/
 
