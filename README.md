@@ -2,6 +2,10 @@
 ---------------------------------
 ```
 --- TO DO | News  ---
+1)Meriki apotimisi 
+2)Table items
+3) functions - function calls
+4) errors
 ```
 ---------------------------------
 ```
