@@ -7,6 +7,9 @@
 #include "SymbolTable_v2.h"
 #include <vector>
 #include <list>
+#include <algorithm>
+#include <iterator>
+
 
 /* Opcode type for Quad class*/
 typedef enum iopcode {
@@ -18,7 +21,7 @@ typedef enum iopcode {
     if_greater, call, param,
     ret, getretval, funcstart,
     funcend, tablecreate,
-    tablegetelem, tablesetelem
+    tablegetelem, tablesetelem,jump
 }iopcode;
 
 /* Types for the expression class*/
@@ -63,7 +66,10 @@ typedef class expr{
         void setboolConst(bool boolConst){this->boolConst=boolConst;}
         expr *getIndex(){return this->index;}
         vector <unsigned> getTrueList(){return truelist;}
+        void setTrueList(vector <unsigned> truelist){this->truelist=truelist;}
         vector <unsigned> getFalseList(){return falselist;}
+        void setFalseList(vector <unsigned> falselist){this->falselist=falselist;}
+
         
         expr(exp_t type){
             this->type=type;
@@ -97,11 +103,44 @@ typedef class quad{
         }
 }quad;
 
+/* FOR PREFIX class to enter */
+typedef class forprefix{
+    private:
+	    unsigned test;
+	    unsigned enter;
+    public:
+        unsigned getTest(){return this->test;}
+        unsigned getEnter(){return this->enter;}
+    forprefix(unsigned test,unsigned enter){
+        this->test=test;
+        this->enter=enter;
+    }
+}forprefix;
+
+typedef class contbreaklists {
+    private:
+        vector <unsigned> breaklist;
+        vector <unsigned> contlist;
+    public:
+        vector <unsigned> getBreakList(){return this->breaklist;}
+        vector <unsigned> getContList(){return this->contlist;}
+        void setBreakList(vector <unsigned> breaklist) {this->breaklist=breaklist;}
+        void setContList(vector <unsigned> contlist) {this->contlist=contlist;}
+        void insertBreakList(unsigned label) {this->breaklist.push_back(label);}
+        void insertContList(unsigned label) {this->contlist.push_back(label);}
+    contbreaklists(){};
+}contbreaklists;
+
+
 /* Quad related functions and variables*/
 void emit(iopcode op,expr *arg1,expr *arg2,expr *result,unsigned label,unsigned line);
 expr *emit_iftableitem(expr *e);
 void expand(void);
-void backpatchlabel(vector <unsigned> list, unsigned label);
+void patchlabel(unsigned quad, unsigned label);
+void patchlabelBC(vector <unsigned> list, unsigned label);
+void backpatch(vector <unsigned> list, unsigned label);
+vector <unsigned> merge(vector <unsigned> a,vector <unsigned> b);
+unsigned int nextQuad();
 void print_quads();
 /************************************************/
 

@@ -24,7 +24,9 @@ extern char *yytext;
 extern FILE *yyin;
 
 SymbolTable table;
+extern contbreaklists *BClist;
 unsigned int scope=0,loop_open=0,func_open=0,func_id_num=0;
+unsigned loopcounter = 0;
 bool isMember=false;
 
 %}
@@ -32,29 +34,39 @@ bool isMember=false;
 %start program 
 %error-verbose
  
-%expect 0
+%expect 1
 
 %union {
     char *stringValue; 
     int intValue; 
+    unsigned labelValue;
     double realValue;
     class expr *expression;
+    class forprefix *fprefix;
+    class contbreaklists *BCLists;
 }
 
 %output="syntax_analyzer.cpp"
 
 %token <stringValue> ID
-%token <intValue> INTCONST M
+%token <intValue> INTCONST 
 %token <realValue> REALCONST
 %token <stringValue> STRING
 /*Tokens for expressions*/
 %type <expression> exp lvalue const primary f_def member assign_exp term obj_def
+/*Tokens for labels*/
+%type <labelValue> M N if_prefix else_prefix whilestart whilecond
+/*Token for for prefix*/
+%type <fprefix> for_prefix
+/*Tokens for break and continue lists*/
+%type <BCLists> stmts stmt if_stmt while_stmt for_stmt ret_stmt block loopstmt
 /*Tokens for keywords*/
 %token IF ELSE WHILE FOR FUNCTION RETURN BREAK CONTINUE AND NOT OR LOCAL TRUE FALSE NIL
 /*Tokens for operators*/
 %token ASSIGN PLUS MINUS MULTIPLY DIV MOD PLUS_PLUS MINUS_MINUS LESS_THAN GREATER_THAN LESS_EQUAL GREATER_EQUAL EQUAL NOT_EQUAL 
 /*Tokens for punctuators*/
 %token L_BRACE R_BRACE L_PARENTHESIS R_PARENTHESIS L_BRACKET R_BRACKET SEMICOLON COMMA COLON DOUBLE_COLON DOT DOUBLE_DOT 
+
 
 %right ASSIGN
 %left OR
@@ -73,13 +85,30 @@ bool isMember=false;
 
 program: stmts ;
 
-stmts: stmts stmt | ;
+stmts: stmts stmt{
+    $$->setBreakList(merge($1->getBreakList(),$2->getBreakList()));
+    $$->setContList(merge($1->getContList(),$2->getContList()));
+} | stmt {$$=$1;} ;
 
 stmt:  exp SEMICOLON  {resettemp();}
-      |  if_stmt | {loop_open++;} while_stmt {loop_open--;} | {loop_open++;} for_stmt {loop_open--;} | ret_stmt 
-      | BREAK SEMICOLON {if(!loop_open) cout << "[Syntax Analysis] ERROR: Cannot use BREAK statement while not within loop, in line " << yylineno << endl;}
-      | CONTINUE SEMICOLON {if(!loop_open) cout << "[Syntax Analysis] ERROR: Cannot use CONTINUE statement while not within loop, in line " << yylineno << endl;}
+      |  if_stmt 
+      | {loop_open++;} while_stmt {loop_open--;} 
+      | {loop_open++;} for_stmt {loop_open--;} 
+      | ret_stmt 
+      | BREAK SEMICOLON {
+          if(!loop_open) cout << "[Syntax Analysis] ERROR: Cannot use BREAK statement while not within loop, in line " << yylineno << endl;
+          $$ = BClist;
+          $$->insertBreakList(nextQuad());
+          emit(jump,NULL,NULL,NULL,0,yylineno);
+      }
+      | CONTINUE SEMICOLON {
+          if(!loop_open) cout << "[Syntax Analysis] ERROR: Cannot use CONTINUE statement while not within loop, in line " << yylineno << endl;
+          $$ = BClist;
+          $$->insertContList(nextQuad());
+          emit(jump,NULL,NULL,NULL,0,yylineno);
+      }
       | block | f_def | SEMICOLON ;
+
 
 exp: assign_exp {$$=$1;}
     | exp PLUS exp{
@@ -108,49 +137,124 @@ exp: assign_exp {$$=$1;}
        emit(mod, $1, $3, $$, 0, yylineno);
     }
     | exp LESS_THAN exp{
-       $$ = new expr(boolexp_e);
-       $$->insertSymbol(newtemp());
-       emit(if_less, $1, $3, $$, 0, yylineno);
+        $$ = new expr(boolexp_e);
+        $$->insertSymbol(newtemp());
+        emit(if_less, $1, $3, $$, nextQuad()+3, yylineno);
+
+        expr *temp=new expr(boolexp_e);
+        temp->setboolConst(false);
+        emit(assign,temp,NULL,$$,0,yylineno); 
+
+        emit(jump,NULL,NULL,NULL,nextQuad()+3,yylineno);
+
+        temp=new expr(boolexp_e);
+        temp->setboolConst(true);
+        emit(assign,temp,NULL,$$,0,yylineno); 
     }
     | exp GREATER_THAN exp{
-       $$ = new expr(boolexp_e);
-       $$->insertSymbol(newtemp());
-       emit(if_greater, $1, $3, $$, 0, yylineno);
+        $$ = new expr(boolexp_e);
+        $$->insertSymbol(newtemp());
+        emit(if_greater, $1, $3, $$, nextQuad()+3, yylineno);
+
+        expr *temp=new expr(boolexp_e);
+        temp->setboolConst(false);
+        emit(assign,temp,NULL,$$,0,yylineno); 
+
+        emit(jump,NULL,NULL,NULL,nextQuad()+3,yylineno);
+
+        temp=new expr(boolexp_e);
+        temp->setboolConst(true);
+        emit(assign,temp,NULL,$$,0,yylineno); 
     }
     | exp LESS_EQUAL exp{
-       $$ = new expr(boolexp_e);
-       $$->insertSymbol(newtemp());
-       emit(if_lesseq, $1, $3, $$, 0, yylineno);
+        $$ = new expr(boolexp_e);
+        $$->insertSymbol(newtemp());
+        emit(if_lesseq, $1, $3, $$, nextQuad()+4, yylineno);
+
+        expr *temp=new expr(boolexp_e);
+        temp->setboolConst(false);
+        emit(assign,temp,NULL,$$,0,yylineno); 
+
+        emit(jump,NULL,NULL,NULL,nextQuad()+4,yylineno);
+
+        temp=new expr(boolexp_e);
+        temp->setboolConst(true);
+        emit(assign,temp,NULL,$$,0,yylineno); 
     }
     | exp GREATER_EQUAL exp {
-       $$ = new expr(boolexp_e);
-       $$->insertSymbol(newtemp());
-       emit(if_greatereq, $1, $3, $$, 0, yylineno);
+        $$ = new expr(boolexp_e);
+        $$->insertSymbol(newtemp());
+        emit(if_greatereq, $1, $3, $$, nextQuad()+4, yylineno);
+
+        expr *temp=new expr(boolexp_e);
+        temp->setboolConst(false);
+        emit(assign,temp,NULL,$$,0,yylineno); 
+
+        emit(jump,NULL,NULL,NULL,nextQuad()+3,yylineno);
+
+        temp=new expr(boolexp_e);
+        temp->setboolConst(true);
+        emit(assign,temp,NULL,$$,0,yylineno); 
     }
-    | exp AND exp {
-       $$ = new expr(boolexp_e);
-       $$->insertSymbol(newtemp());
-       emit(andb, $1, $3, $$, 0, yylineno);
+    | exp AND M exp {
+        $$ = new expr(boolexp_e);
+        $$->insertSymbol(newtemp());
+        emit(andb, $1, $4, $$, 0, yylineno);
+       
+        backpatch($1->getTrueList(),$3);
+        $$->setTrueList($4->getTrueList());
+        $$->setFalseList(merge($1->getFalseList(),$4->getFalseList()));
+
+
     }
-    | exp OR exp {
-       $$ = new expr(boolexp_e);
-       $$->insertSymbol(newtemp());
-       emit(orb, $1, $3, $$, 0, yylineno);
+    | exp OR M exp {
+        $$ = new expr(boolexp_e);
+        $$->insertSymbol(newtemp());
+        emit(orb, $1, $4, $$, 0, yylineno);
+       
+        backpatch($1->getFalseList(),$3);
+        $$->setTrueList(merge($1->getTrueList(),$4->getTrueList()));
+        $$->setFalseList($4->getFalseList());
+
     }
     | exp EQUAL exp{
-       $$ = new expr(boolexp_e);
-       $$->insertSymbol(newtemp());
-       emit(if_eq, $1, $3, $$, 0, yylineno);
+        $$ = new expr(boolexp_e);
+        $$->insertSymbol(newtemp());
+        emit(if_eq, $1, $3, $$, nextQuad()+4, yylineno);
+
+        expr *temp=new expr(boolexp_e);
+        temp->setboolConst(false);
+        emit(assign,temp,NULL,$$,0,yylineno); 
+
+        emit(jump,NULL,NULL,NULL,nextQuad()+3,yylineno);
+
+        temp=new expr(boolexp_e);
+        temp->setboolConst(true);
+        emit(assign,temp,NULL,$$,0,yylineno); 
     }
     | exp NOT_EQUAL exp{
-       $$ = new expr(boolexp_e);
-       $$->insertSymbol(newtemp());
-       emit(notb, $1, $3, $$, 0, yylineno);
+        $$ = new expr(boolexp_e);
+        $$->insertSymbol(newtemp());
+        emit(if_noteq, $1, $3, $$, nextQuad()+4, yylineno);
+
+        expr *temp=new expr(boolexp_e);
+        temp->setboolConst(false);
+        emit(assign,temp,NULL,$$,0,yylineno); 
+
+        emit(jump,NULL,NULL,NULL,nextQuad()+3,yylineno);
+
+        temp=new expr(boolexp_e);
+        temp->setboolConst(true);
+        emit(assign,temp,NULL,$$,0,yylineno); 
     } 
     | term {$$=$1;};
 
-
-term: L_PARENTHESIS exp R_PARENTHESIS | MINUS exp %prec UMINUS | NOT exp 
+term: L_PARENTHESIS exp R_PARENTHESIS | MINUS exp %prec UMINUS 
+    | NOT exp {
+        $$=$2;
+        $$->setTrueList($2->getFalseList());
+        $$->setFalseList($2->getTrueList());
+    }
     | PLUS_PLUS lvalue {
         Symbol *symbol=table.Lookup($2->getSymbol()->getName());
         if(symbol->getType()==programfunc_s || symbol->getType()==libraryfunc_s)
@@ -356,15 +460,81 @@ idlist: ID {
     }
     | ;
 
-if_stmt: IF L_PARENTHESIS exp R_PARENTHESIS stmt | IF L_PARENTHESIS exp R_PARENTHESIS stmt ELSE stmt;
+if_stmt: if_prefix stmt {
+        patchlabel($1, nextQuad());
+    }
+    | if_prefix stmt else_prefix stmt {
+        patchlabel($1,$3+1); 
+        patchlabel($3, nextQuad());        
+} ;
 
-while_stmt: WHILE L_PARENTHESIS exp R_PARENTHESIS stmt ;
+if_prefix: IF L_PARENTHESIS exp R_PARENTHESIS{
+    expr *temp = new expr(constbool_e);
+    temp->setboolConst(true);
+    emit(if_eq, $3, temp,NULL, nextQuad()+2 , yylineno); 
+    $$ = nextQuad();
+    emit(jump,NULL,NULL,NULL,0,yylineno);
+} ;
 
-for_stmt: FOR L_PARENTHESIS elist SEMICOLON exp SEMICOLON elist R_PARENTHESIS stmt ;
+
+else_prefix: ELSE {
+    $$ = nextQuad();   
+    emit(jump,NULL,NULL,NULL,0,yylineno);
+} ;
+
+loopstart : {++loopcounter;};
+
+loopend : {--loopcounter;};
+
+loopstmt : loopstart stmt loopend { $$ = $2; } ;
+
+while_stmt: whilestart whilecond loopstmt{
+    emit(jump,NULL,NULL,NULL,$1,yylineno); 
+    patchlabel($2, nextQuad()); 
+    patchlabelBC($$->getBreakList(), nextQuad()); 
+    patchlabelBC($$->getContList(), $1);
+} ;
+
+
+whilestart: WHILE {$$=nextQuad();};
+
+whilecond: L_PARENTHESIS exp R_PARENTHESIS  {
+    expr *temp = new expr(constbool_e);
+    temp->setboolConst(true);
+    emit(if_eq, $2, temp, NULL, nextQuad()+2,yylineno); 
+    $$ = nextQuad();
+    emit(jump,NULL,NULL,NULL,0,yylineno);
+};
+
+for_prefix: FOR L_PARENTHESIS elist SEMICOLON M exp SEMICOLON{
+    $$ = new forprefix($5,nextQuad());
+    expr *temp = new expr(constbool_e);
+    temp->setboolConst(true);
+    emit(if_eq,$6,temp,NULL,0,yylineno);
+} ; 
+
+for_stmt: for_prefix N elist R_PARENTHESIS N loopstmt N{
+    patchlabel($1->getEnter(),$5+1); // true jump
+    patchlabel($2,nextQuad()); // false jump
+    patchlabel($5,$1->getTest()); // loop jump
+    patchlabel($7,$2+1); // closure jump
+    
+    patchlabelBC($$->getBreakList(),nextQuad());  //false jump
+    patchlabelBC($$->getContList(),$2+1);  //closure jump
+} ;
 
 ret_stmt: RETURN SEMICOLON {
-    if(!func_open) cout << "[Syntax Analysis] ERROR: Cannot use RETURN statement while not within function, in line " << yylineno << endl;}
-    | RETURN exp SEMICOLON {if(!func_open) cout << "[Syntax Analysis] ERROR: Cannot use RETURN statement while not within function, in line "<< yylineno << endl;};
+        if(!func_open) cout << "[Syntax Analysis] ERROR: Cannot use RETURN statement while not within function, in line " << yylineno << endl;
+        emit(ret,NULL,NULL,NULL,0,yylineno);
+    }
+    | RETURN exp SEMICOLON {
+        if(!func_open) cout << "[Syntax Analysis] ERROR: Cannot use RETURN statement while not within function, in line "<< yylineno << endl;
+        emit(ret,NULL,NULL,$2,0,yylineno);
+    };
+
+N: {$$=nextQuad(); emit(jump,NULL,NULL,NULL,0,yylineno);};
+
+M: {$$=nextQuad();};
 %%
 
 int yyerror(const char* yaccProvidedMessage){
