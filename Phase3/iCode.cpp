@@ -17,6 +17,7 @@ unsigned int currQuad = 0;
 unsigned int tempVar = 0;
 vector <quad> quads;
 contbreaklists *BClist = new contbreaklists();
+stack <unsigned> LoopCounterStack;
 
 void emit(iopcode op,expr *arg1,expr *arg2,expr *result,unsigned label,unsigned line){
     currQuad++;

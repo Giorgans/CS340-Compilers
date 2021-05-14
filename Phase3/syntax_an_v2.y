@@ -25,6 +25,7 @@ extern FILE *yyin;
 
 SymbolTable table;
 extern contbreaklists *BClist;
+extern stack <unsigned> LoopCounterStack;
 unsigned int scope=0,loop_open=0,func_open=0,func_id_num=0;
 unsigned loopcounter = 0;
 bool isMember=false;
@@ -33,7 +34,8 @@ bool isMember=false;
 
 %start program 
 %error-verbose
- 
+%output="syntax_analyzer.cpp"
+
 %expect 1
 
 %union {
@@ -45,8 +47,6 @@ bool isMember=false;
     class forprefix *fprefix;
     class contbreaklists *BCLists;
 }
-
-%output="syntax_analyzer.cpp"
 
 %token <stringValue> ID
 %token <intValue> INTCONST 
@@ -107,7 +107,9 @@ stmt:  exp SEMICOLON  {resettemp();}
           $$->insertContList(nextQuad());
           emit(jump,NULL,NULL,NULL,0,yylineno);
       }
-      | block | f_def | SEMICOLON ;
+      | block 
+      | f_def 
+      | SEMICOLON ;
 
 
 exp: assign_exp {$$=$1;}
@@ -371,6 +373,10 @@ index_el: L_BRACE exp COLON exp R_BRACE ;
 
 block: L_BRACE {scope++;} stmts  R_BRACE {table.Hide(scope); scope--;};
 
+funcblockstart : {LoopCounterStack.push(loopcounter); loopcounter=0; };
+
+funcblockend :  { loopcounter = LoopCounterStack.top(); LoopCounterStack.pop(); };
+
 f_def: FUNCTION ID{
         Symbol *symbol;
         symbol=table.LookupScope($2,scope);
@@ -396,7 +402,7 @@ f_def: FUNCTION ID{
             $$->insertSymbol(table.LookupScope($2,scope));
         }
     }
-        L_PARENTHESIS {scope++;} idlist R_PARENTHESIS  { scope--; func_open++;} block {func_open--;}
+        L_PARENTHESIS {scope++;} idlist R_PARENTHESIS  { scope--; func_open++;}funcblockstart block funcblockend {func_open--;}
         
     |  FUNCTION { 
             string fname = "n$" + to_string(func_id_num); func_id_num++; table.Insert(new Symbol(programfunc_s,fname,currscopespace(),scope,yylineno,currscopeoffset()));

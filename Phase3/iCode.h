@@ -7,6 +7,7 @@
 #include "SymbolTable_v2.h"
 #include <vector>
 #include <list>
+#include <stack>
 #include <algorithm>
 #include <iterator>
 
