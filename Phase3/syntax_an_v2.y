@@ -26,6 +26,7 @@ extern FILE *yyin;
 SymbolTable table;
 extern contbreaklists *BClist;
 extern stack <unsigned> LoopCounterStack;
+extern stack <unsigned> functionLocalStack;
 unsigned int scope=0,loop_open=0,func_open=0,func_id_num=0;
 unsigned loopcounter = 0;
 bool isMember=false;
@@ -43,17 +44,22 @@ bool isMember=false;
     int intValue; 
     unsigned labelValue;
     double realValue;
+    class Symbol *sym;
     class expr *expression;
     class forprefix *fprefix;
     class contbreaklists *BCLists;
 }
 
-%token <stringValue> ID
 %token <intValue> INTCONST 
 %token <realValue> REALCONST
-%token <stringValue> STRING
+/*String type tokens*/
+%token <stringValue> ID STRING
+/*Tokens for functions*/
+%type <intValue> funcbody
+%type <stringValue> funcname
+%type <sym> funcprefix f_def
 /*Tokens for expressions*/
-%type <expression> exp lvalue const primary f_def member assign_exp term obj_def
+%type <expression> exp lvalue const primary  member assign_exp term obj_def
 /*Tokens for labels*/
 %type <labelValue> M N if_prefix else_prefix whilestart whilecond
 /*Token for for prefix*/
@@ -373,11 +379,15 @@ index_el: L_BRACE exp COLON exp R_BRACE ;
 
 block: L_BRACE {scope++;} stmts  R_BRACE {table.Hide(scope); scope--;};
 
-funcblockstart : {LoopCounterStack.push(loopcounter); loopcounter=0; };
+funcblockstart: {LoopCounterStack.push(loopcounter); loopcounter=0; };
 
-funcblockend :  { loopcounter = LoopCounterStack.top(); LoopCounterStack.pop(); };
+funcblockend:  { loopcounter = LoopCounterStack.top(); LoopCounterStack.pop(); };
 
-f_def: FUNCTION ID{
+funcname: ID { $$ = $1; } 
+            | { string fname = "n$" + to_string(func_id_num); func_id_num++; $$ = strcpy(new char[fname.length() + 1], fname.c_str()); };   
+
+
+funcprefix: FUNCTION funcname{
         Symbol *symbol;
         symbol=table.LookupScope($2,scope);
         if(symbol!=NULL && symbol->IsActive()){
@@ -387,8 +397,8 @@ f_def: FUNCTION ID{
                 cout<< "\tNote: Previous definition of \""<< $2 << "\" in line " << symbol->getLine() << endl;
              }   
             if(!scope && symbol->getType()==libraryfunc_s){
-                $$ = new expr(libraryfunc_e);
-                $$->insertSymbol(symbol);
+                //$$ = new expr(libraryfunc_e);
+                //$$->insertSymbol(symbol);
                 cout << "[Syntax Analysis] ERROR: Collision with library function \"" << $2 << "\", in line " << yylineno << endl;                
             }
             if(symbol!=NULL  && symbol->getType()==var_s){
@@ -397,21 +407,30 @@ f_def: FUNCTION ID{
             }
         }
         else{
-            table.Insert(new Symbol(programfunc_s,$2,currscopespace(),scope,yylineno,currscopeoffset()));
-            $$ = new expr(programfunc_e);
-            $$->insertSymbol(table.LookupScope($2,scope));
-        }
-    }
-        L_PARENTHESIS {scope++;} idlist R_PARENTHESIS  { scope--; func_open++;}funcblockstart block funcblockend {func_open--;}
-        
-    |  FUNCTION { 
-            string fname = "n$" + to_string(func_id_num); func_id_num++; table.Insert(new Symbol(programfunc_s,fname,currscopespace(),scope,yylineno,currscopeoffset()));
-            
-            $$ = new expr(programfunc_e);
-            $$->insertSymbol(table.LookupScope(fname,scope));
-        }
-         L_PARENTHESIS {scope++;} idlist R_PARENTHESIS { scope--; func_open++;}  block{func_open--;};
+            symbol = new Symbol(programfunc_s,$2,currscopespace(),scope,yylineno,currscopeoffset());
+            table.Insert(symbol);
+            symbol->setiAddress(nextQuad());
+            $$ = symbol;
+            emit(funcstart,NULL,NULL,lvalue_exp(symbol),0,yylineno);
+            functionLocalStack.push(getfunctionLocalOffset());
+            enterscopespace();
+            resetformalargoffset();
 
+        }
+
+    }
+         
+funcargs:  L_PARENTHESIS {scope++;} idlist R_PARENTHESIS {
+    enterscopespace();
+    resetfunctionlocaloffset();
+} ;
+
+funcbody: { scope--; func_open++;}funcblockstart block funcblockend {func_open--; exitscopespace(); } ;
+
+f_def: funcprefix funcargs funcbody{
+    exitscopespace();
+}
+        
 const: INTCONST { 
                     $$ = new expr(costnum_e);
                     $$->setnumconst($1);

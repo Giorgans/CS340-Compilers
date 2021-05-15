@@ -18,6 +18,7 @@ unsigned int tempVar = 0;
 vector <quad> quads;
 contbreaklists *BClist = new contbreaklists();
 stack <unsigned> LoopCounterStack;
+stack <unsigned> functionLocalStack;
 
 void emit(iopcode op,expr *arg1,expr *arg2,expr *result,unsigned label,unsigned line){
     currQuad++;
@@ -239,6 +240,17 @@ void inccurrscopeoffset(void){
         default : assert(0);
     }
 }
+
+unsigned getprogramVarOffset(){return programVarOffset; }
+unsigned getfunctionLocalOffset(){return functionLocalOffset;}
+unsigned getformalArgOffset(){return formalArgOffset;}
+
+
+void resetformalargoffset(void){formalArgOffset = 0;}
+
+void resetfunctionlocaloffset(void){functionLocalOffset = 0;}
+
+
 /************************************************/
 
 

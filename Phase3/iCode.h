@@ -155,6 +155,11 @@ void exitscopespace(void);
 /****   Offset related functions               */
 unsigned currscopeoffset(void);
 void inccurrscopeoffset(void);
+void resetformalargoffset(void);
+void resetfunctionlocaloffset(void);
+unsigned getprogramVarOffset();
+unsigned getfunctionLocalOffset();
+unsigned getformalArgOffset();
 /************************************************/
 
 

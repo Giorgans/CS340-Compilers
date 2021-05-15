@@ -26,6 +26,9 @@ typedef class Symbol {
         unsigned scope;
         unsigned offset;
         unsigned line;
+        /*For Functions only*/
+        unsigned totalLocals;
+        unsigned iaddress;
     public:
         symbol_t getType(){return type;}
         string getName(){return name;}
@@ -35,6 +38,10 @@ typedef class Symbol {
         unsigned getOffset(){return offset;}
         bool IsActive(){return isActive;}
         void setInactive(){this->isActive=false;}
+        unsigned getTotalLocals(){return this->totalLocals;}
+        void setTotalLocals(unsigned totalLocals){this->totalLocals=totalLocals;}
+        unsigned getiAddress(){return this->iaddress;}
+        void setiAddress(unsigned iaddress){this->iaddress=iaddress;}
 
         Symbol (symbol_t type,string name,scopespace_t space,unsigned scope,unsigned line,unsigned offset){
             this->isActive=true;
