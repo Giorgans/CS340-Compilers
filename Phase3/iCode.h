@@ -71,8 +71,7 @@ typedef class expr{
         void setTrueList(vector <unsigned> truelist){this->truelist=truelist;}
         vector <unsigned> getFalseList(){return falselist;}
         void setFalseList(vector <unsigned> falselist){this->falselist=falselist;}
-
-        
+    
         expr(exp_t type){
             this->type=type;
         }

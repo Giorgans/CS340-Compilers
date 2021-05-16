@@ -280,19 +280,89 @@ term: L_PARENTHESIS exp R_PARENTHESIS {$$=$2;}
     | PLUS_PLUS lvalue {
         Symbol *symbol=table.Lookup($2->getSymbol()->getName());
         if(symbol->getType()==programfunc_s || symbol->getType()==libraryfunc_s)
-            cout <<"[Syntax Analysis] ERROR: Trying to left increase the function \"" << $2 << "\" by 1, in line " <<  yylineno << endl;}
+            cout <<"[Syntax Analysis] ERROR: Trying to left increase the function \"" << $2 << "\" by 1, in line " <<  yylineno << endl;
+
+        if($2->getType() == tableitem_e){
+            $$ =  emit_iftableitem($2);
+            expr *temp = new expr(costnum_e);
+            temp->setnumconst(1);
+            emit(add,$$,temp,$$,0,yylineno);
+            emit(tablesetelem,$2,$2->getIndex(),$$,0,yylineno);
+        }
+        else{
+            expr *temp = new expr(costnum_e);
+            temp->setnumconst(1);
+            emit(add,$2,temp,$2,0,yylineno);
+            $$ = new expr(arithexp_e);
+            $$->insertSymbol(newtemp());
+            emit(assign,$2,NULL,$$,0,yylineno);
+        }
+
+    }
     | lvalue PLUS_PLUS {
         Symbol *symbol=table.Lookup($1->getSymbol()->getName());
         if(symbol->getType()==programfunc_s || symbol->getType()==libraryfunc_s)
-            cout <<"[Syntax Analysis] ERROR: Trying to right increase the function \"" << $1 << "\" by 1, in line " <<yylineno << endl;}
+            cout <<"[Syntax Analysis] ERROR: Trying to right increase the function \"" << $1 << "\" by 1, in line " <<yylineno << endl;
+    
+        $$ = new expr(var_e);
+        $$->insertSymbol(newtemp());
+        if($1->getType() == tableitem_e){
+            expr *value = emit_iftableitem($1);
+            expr *temp = new expr(costnum_e);
+            temp->setnumconst(1);
+            emit(assign,value,NULL,$$,0,yylineno);
+            emit(add,value,temp,value,0,yylineno);
+            emit(tablesetelem,$1,$1->getIndex(),value,0,yylineno);
+        }
+        else{
+            emit(assign,$1,NULL,$$,0,yylineno);
+            expr *temp = new expr(costnum_e);
+            temp->setnumconst(1);
+            emit(add,$1,temp,$1,0,yylineno);
+        }
+    }
     | MINUS_MINUS lvalue {
         Symbol *symbol=table.Lookup($2->getSymbol()->getName());
         if(symbol->getType()==programfunc_s || symbol->getType()==libraryfunc_s)
-            cout <<"[Syntax Analysis] ERROR: Trying to left decrease the function \"" << $2 << "\" by 1, in line" << yylineno << endl;}
+            cout <<"[Syntax Analysis] ERROR: Trying to left decrease the function \"" << $2 << "\" by 1, in line" << yylineno << endl;
+    
+        if($2->getType() == tableitem_e){
+            $$ =  emit_iftableitem($2);
+            expr *temp = new expr(costnum_e);
+            temp->setnumconst(-1);
+            emit(add,$$,temp,$$,0,yylineno);
+            emit(tablesetelem,$2,$2->getIndex(),$$,0,yylineno);
+        }
+        else{
+            expr *temp = new expr(costnum_e);
+            temp->setnumconst(-1);
+            emit(add,$2,temp,$2,0,yylineno);
+            $$ = new expr(arithexp_e);
+            $$->insertSymbol(newtemp());
+            emit(assign,$2,NULL,$$,0,yylineno);
+        }    
+    }
     | lvalue MINUS_MINUS {
         Symbol *symbol=table.Lookup($1->getSymbol()->getName());
         if(symbol->getType()==programfunc_s || symbol->getType()==libraryfunc_s)
-            cout <<"[Syntax Analysis] ERROR: Trying to right decrease the function \"" << $1 << "\" by 1, in line " << yylineno << endl;}
+            cout <<"[Syntax Analysis] ERROR: Trying to right decrease the function \"" << $1 << "\" by 1, in line " << yylineno << endl;
+            
+        $$ = new expr(var_e);
+        $$->insertSymbol(newtemp());
+        if($1->getType() == tableitem_e){
+            expr *value = emit_iftableitem($1);
+            expr *temp = new expr(costnum_e);
+            temp->setnumconst(-1);
+            emit(assign,value,NULL,$$,0,yylineno);
+            emit(add,value,temp,value,0,yylineno);
+            emit(tablesetelem,$1,$1->getIndex(),value,0,yylineno);
+        }
+        else{
+            emit(assign,$1,NULL,$$,0,yylineno);
+            expr *temp = new expr(costnum_e);
+            temp->setnumconst(-1);
+            emit(add,$1,temp,$1,0,yylineno);
+        }    }
     | primary {$$=$1;} ;
 
 assign_exp: lvalue ASSIGN exp {
@@ -306,12 +376,15 @@ assign_exp: lvalue ASSIGN exp {
                 cout << "[Syntax Analysis] ERROR: Trying to assign a value to \"" << $1 << "\" user function, in line "<< yylineno << endl;
         }  
         if(isMember) isMember=false;
-
-        emit(assign,$3,NULL,$1,0,yylineno);
-        $$ = new expr(assignexp_e);
-        $$->insertSymbol(newtemp());
-        emit(assign,$1,NULL,$$,0,yylineno);
-
+        
+        if($1->getType()==tableitem_e)
+            emit(tablesetelem,$1,$1->getIndex(),$3,0,yylineno);
+        else{
+            emit(assign,$3,NULL,$1,0,yylineno);
+            $$ = new expr(assignexp_e);
+            $$->insertSymbol(newtemp());
+            emit(assign,$1,NULL,$$,0,yylineno);
+        }
 };
 
 primary: lvalue { $$ = emit_iftableitem($1);}
@@ -420,7 +493,19 @@ elist: exp {$$=new elists($1);}
     | {}; 
 
 obj_def:  L_BRACKET indexed R_BRACKET 
-    | L_BRACKET elist R_BRACKET  ;
+    | L_BRACKET elist R_BRACKET {
+        expr *temp = new expr(newtable_e),*tempi;
+        temp->insertSymbol(newtemp());
+        emit(tablecreate,NULL,NULL,temp,0,yylineno);
+        int count = 0;
+        for(list <expr>::iterator i = $2->getElist()->begin() ; i!=$2->getElist()->end() ; i++){
+            tempi = new expr(costnum_e);
+            count++;
+            tempi->setnumconst(count);
+            emit(tablesetelem,temp,tempi,&*i,0,yylineno);
+        }
+        $$ = temp;
+    }  ;
 
 indexed: index_el 
     | indexed COMMA index_el ;
@@ -477,9 +562,7 @@ funcargs:  L_PARENTHESIS {scope++;} idlist R_PARENTHESIS {
 
 funcbody: { scope--; func_open++;}funcblockstart block funcblockend {func_open--; exitscopespace(); } ;
 
-f_def: funcprefix funcargs funcbody{
-    exitscopespace();
-}
+f_def: funcprefix funcargs funcbody{ exitscopespace(); }
         
 const:  INTCONST { 
                     $$ = new expr(costnum_e);
