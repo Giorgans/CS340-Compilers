@@ -31,8 +31,9 @@ expr *emit_iftableitem(expr *e){
     if(e->getType() != tableitem_e)
         return e;
     else{
-        expr *result = NULL;//new expr(var_e);
-        //emit(tablegetelem,e,e->getIndex(),label,line);
+        expr *result = new expr(var_e);
+        result->insertSymbol(newtemp());
+        emit(tablegetelem,e,e->getIndex(),NULL,0,yylineno);
         return result;
     }
 }
@@ -74,6 +75,41 @@ void backpatch(vector <unsigned> list, unsigned label){
         quads.at(list.at(i)).setLabel(label);
 
 	}
+}
+
+void checkuminus(expr *e){
+    if(e->getType()==constbool_e   || 
+       e->getType()==conststring_e || 
+       e->getType()==nil_e         || 
+       e->getType()==newtable_e    || 
+       e->getType()==programfunc_e || 
+       e->getType()==libraryfunc_e || 
+       e->getType()==boolexp_e )
+        cout << "[Intemediate Code] ERROR: Illegal expression to unary - , in line "<< yylineno << endl;
+
+       //comperror("Illegal expression to unary -");
+
+}
+
+expr *member_item(expr *lvalue,string name){
+    lvalue = emit_iftableitem(lvalue);
+    expr *item = new expr(tableitem_e);
+    item->insertSymbol(lvalue->getSymbol());
+    expr *temp = new expr(conststring_e);
+    temp->setstrConst(name);
+    item->setIndex(temp);
+    return item;
+}
+
+expr *make_call(expr *lvalue,elists *elist){
+    expr *func = emit_iftableitem(lvalue);
+    for (list <expr>::iterator i = elist->getElist()->begin() ; i!=elist->getElist()->end() ; i++)
+        emit(param,NULL,NULL,&*i,0,yylineno);
+    emit(call,NULL,NULL,func,0,yylineno);
+    expr *result = new expr(var_e);
+    result->insertSymbol(newtemp());
+    emit(getretval,NULL,NULL,result,0,yylineno);
+    return result;
 }
 
 void print_quads(){

@@ -66,6 +66,7 @@ typedef class expr{
         bool getboolConst(){return boolConst;}
         void setboolConst(bool boolConst){this->boolConst=boolConst;}
         expr *getIndex(){return this->index;}
+        void setIndex(expr *index){this->index=index;}
         vector <unsigned> getTrueList(){return truelist;}
         void setTrueList(vector <unsigned> truelist){this->truelist=truelist;}
         vector <unsigned> getFalseList(){return falselist;}
@@ -118,6 +119,34 @@ typedef class forprefix{
     }
 }forprefix;
 
+typedef class elists{
+    private:
+        list <expr> *elist;
+    public:
+        list <expr> *getElist(){return this->elist;}
+        void insertElistItem(expr *e){this->elist->push_back(*e);}
+        void pushfrontElistItem(expr *e){this->elist->push_front(*e);}
+    elists(expr *e){
+        this->elist->push_back(*e);
+    }
+}elists;
+
+typedef class calls{
+    private:
+        string name;
+        bool method;
+        elists *elist;
+    public:
+        string getName(){return this->name;}
+        bool getMethod(){return this->method;}
+        elists *getElist(){return this->elist;}
+    calls(string name,bool method,elists *elist){
+        this->name=name;
+        this->method=method;
+        this->elist=elist;
+    }
+}calls;
+
 typedef class contbreaklists {
     private:
         vector <unsigned> breaklist;
@@ -141,6 +170,9 @@ void patchlabel(unsigned quad, unsigned label);
 void patchlabelBC(vector <unsigned> list, unsigned label);
 void backpatch(vector <unsigned> list, unsigned label);
 vector <unsigned> merge(vector <unsigned> a,vector <unsigned> b);
+expr *member_item(expr *lvalue,string name);
+expr *make_call(expr *lvalue,elists *elist);
+void checkuminus(expr *e);
 unsigned int nextQuad();
 void print_quads();
 /************************************************/

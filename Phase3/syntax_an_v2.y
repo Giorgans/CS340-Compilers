@@ -48,9 +48,13 @@ bool isMember=false;
     class expr *expression;
     class forprefix *fprefix;
     class contbreaklists *BCLists;
+    class calls *Call;
+    class elists *elistV;
 }
 
+/*Integer const token*/
 %token <intValue> INTCONST 
+/*Real const token*/
 %token <realValue> REALCONST
 /*String type tokens*/
 %token <stringValue> ID STRING
@@ -59,20 +63,22 @@ bool isMember=false;
 %type <stringValue> funcname
 %type <sym> funcprefix f_def
 /*Tokens for expressions*/
-%type <expression> exp lvalue const primary  member assign_exp term obj_def
+%type <expression> exp lvalue const primary member assign_exp term obj_def call
+%type <elistV> elist
 /*Tokens for labels*/
 %type <labelValue> M N if_prefix else_prefix whilestart whilecond
 /*Token for for prefix*/
 %type <fprefix> for_prefix
 /*Tokens for break and continue lists*/
 %type <BCLists> stmts stmt if_stmt while_stmt for_stmt ret_stmt block loopstmt
+/*Tokens for calls*/
+%type <Call> normcall methodcall callsuffix
 /*Tokens for keywords*/
 %token IF ELSE WHILE FOR FUNCTION RETURN BREAK CONTINUE AND NOT OR LOCAL TRUE FALSE NIL
 /*Tokens for operators*/
 %token ASSIGN PLUS MINUS MULTIPLY DIV MOD PLUS_PLUS MINUS_MINUS LESS_THAN GREATER_THAN LESS_EQUAL GREATER_EQUAL EQUAL NOT_EQUAL 
 /*Tokens for punctuators*/
 %token L_BRACE R_BRACE L_PARENTHESIS R_PARENTHESIS L_BRACKET R_BRACKET SEMICOLON COMMA COLON DOUBLE_COLON DOT DOUBLE_DOT 
-
 
 %right ASSIGN
 %left OR
@@ -257,9 +263,17 @@ exp: assign_exp {$$=$1;}
     } 
     | term {$$=$1;};
 
-term: L_PARENTHESIS exp R_PARENTHESIS | MINUS exp %prec UMINUS 
+term: L_PARENTHESIS exp R_PARENTHESIS {$$=$2;}
+    | MINUS exp %prec UMINUS {
+        checkuminus($2);
+        $$=new expr(arithexp_e);
+        $$->insertSymbol(newtemp());
+        emit(uminus,$2,NULL,$$,0,yylineno);
+    }
     | NOT exp {
-        $$=$2;
+        $$ = new expr(boolexp_e);
+        $$->insertSymbol(newtemp());
+        emit(notb,$2,NULL,$$,0,yylineno);
         $$->setTrueList($2->getFalseList());
         $$->setFalseList($2->getTrueList());
     }
@@ -300,7 +314,14 @@ assign_exp: lvalue ASSIGN exp {
 
 };
 
-primary: lvalue {$$=$1;}| call | obj_def | L_PARENTHESIS f_def R_PARENTHESIS | const {$$=$1;} ;
+primary: lvalue { $$ = emit_iftableitem($1);}
+        | call 
+        | obj_def 
+        | L_PARENTHESIS f_def R_PARENTHESIS {
+            $$ = new expr(programfunc_e);
+            $$->insertSymbol($2);
+        }
+        | const {$$=$1;} ;
 
 lvalue: ID {
 
@@ -359,21 +380,50 @@ lvalue: ID {
                     
     |   member {isMember=true;};
 
-member:  lvalue DOT ID  | lvalue L_BRACKET exp R_BRACKET | call DOT ID | call L_BRACKET exp R_BRACKET ;
+member:  lvalue DOT ID   {$$ = member_item($1,$3);}
+    | lvalue L_BRACKET exp R_BRACKET {
+        $1 = emit_iftableitem($1);
+        $$ = new expr(tableitem_e);
+        $$->insertSymbol($1->getSymbol());
+        $$->setIndex($3);
+    }
+    | call DOT ID 
+    | call L_BRACKET exp R_BRACKET ;
 
-call: call L_PARENTHESIS elist R_PARENTHESIS | lvalue callsuffix | L_PARENTHESIS f_def R_PARENTHESIS L_PARENTHESIS elist R_PARENTHESIS ; 
+call: call L_PARENTHESIS elist R_PARENTHESIS { $$ = make_call($1,$3); }
+    | lvalue callsuffix {
+        if($2->getMethod()){
+            expr *self = $1;
+            //$1 = emit_iftableitem(member_item(self,$2->getName()));  // TO DO!
+            $2->getElist()->pushfrontElistItem(self);
+        }
+        $$ = make_call($1,$2->getElist());
+
+    }
+    | L_PARENTHESIS f_def R_PARENTHESIS L_PARENTHESIS elist R_PARENTHESIS{
+        expr *func = new expr(programfunc_e);
+        func->insertSymbol($2);
+        $$ = make_call(func,$5);
+    } ; 
    
-callsuffix: normcall | methodcall ;
+callsuffix: normcall {$$=$1;}
+    | methodcall {$$=$1;} ;
 
-normcall: L_PARENTHESIS elist R_PARENTHESIS ;
+normcall: L_PARENTHESIS elist R_PARENTHESIS { $$ = new calls("nil",false,$2);};
 
-methodcall: DOUBLE_DOT ID L_PARENTHESIS elist R_PARENTHESIS ;
+methodcall: DOUBLE_DOT ID L_PARENTHESIS elist R_PARENTHESIS {
+    $$ = new calls($2,true,$4);
+} ;
 
-elist: exp | elist COMMA exp | {};
+elist: exp {$$=new elists($1);}
+    | elist COMMA exp {$$=$1; $$->insertElistItem($3);}
+    | {}; 
 
-obj_def:  L_BRACKET indexed R_BRACKET | L_BRACKET elist R_BRACKET  ;
+obj_def:  L_BRACKET indexed R_BRACKET 
+    | L_BRACKET elist R_BRACKET  ;
 
-indexed: index_el | indexed COMMA index_el ;
+indexed: index_el 
+    | indexed COMMA index_el ;
 
 index_el: L_BRACE exp COLON exp R_BRACE ;
 
@@ -431,15 +481,15 @@ f_def: funcprefix funcargs funcbody{
     exitscopespace();
 }
         
-const: INTCONST { 
+const:  INTCONST { 
                     $$ = new expr(costnum_e);
                     $$->setnumconst($1);
                 }   
-    | REALCONST {
+        | REALCONST {
                     $$ = new expr(costnum_e);
                     $$->setnumconst($1);
                 }
-       | STRING {
+        | STRING {
                     $$ = new expr(conststring_e);
                     $$->setstrConst($1);
 
