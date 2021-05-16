@@ -5,14 +5,11 @@
      Compiled and run in Mac OS Big Sur 11.3.1 , x86 chip***/
 
 #include "iCode.h"
-//#define EXPAND_SIZE 1024
-//#define CURR_SIZE (total*sizeof(quad))
-//#define NEW_SIZE (EXPAND_SIZE*sizeof(quad)+CURR_SIZE)
+
 extern SymbolTable table;
 extern int yylineno,scope;
 
 /***   Quad related functions and variables */
-//unsigned total = 0;
 unsigned int currQuad = 0;
 unsigned int tempVar = 0;
 vector <quad> quads;
@@ -21,7 +18,6 @@ stack <unsigned> LoopCounterStack;
 stack <unsigned> functionLocalStack;
 
 /************************ Quad related functions and variables ************************/
-
 void emit(iopcode op,expr *arg1,expr *arg2,expr *result,unsigned label,unsigned line){
     currQuad++;
     quads.push_back(quad(op,result,arg1,arg2,label,line));
