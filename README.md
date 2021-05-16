@@ -41,5 +41,8 @@ Iasonas Ntagiannis 3540
 1)Gia compile: makee
 2)Gia run: ./alpha_icode <test_file_name>.txt 
 3)Gia delete temp arxeiwn(.cpp,.output,syntax_analyzer):make clean
+```
+---------------------------------
+```
 
 
