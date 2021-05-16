@@ -164,19 +164,26 @@ typedef class contbreaklists {
 
 /* Quad related functions and variables*/
 void emit(iopcode op,expr *arg1,expr *arg2,expr *result,unsigned label,unsigned line);
-expr *emit_iftableitem(expr *e);
 void expand(void);
-void patchlabel(unsigned quad, unsigned label);
-void patchlabelBC(vector <unsigned> list, unsigned label);
-void backpatch(vector <unsigned> list, unsigned label);
-vector <unsigned> merge(vector <unsigned> a,vector <unsigned> b);
-expr *member_item(expr *lvalue,string name);
-expr *make_call(expr *lvalue,elists *elist);
-void checkuminus(expr *e);
 unsigned int nextQuad();
 void print_quads();
 /************************************************/
 
+/* Expressions related functions */
+expr *emit_iftableitem(expr *e);
+expr *lvalue_exp(Symbol *sym);
+expr *member_item(expr *lvalue,string name);
+expr *make_call(expr *lvalue,elists *elist);
+void checkuminus(expr *e);
+vector <unsigned> merge(vector <unsigned> a,vector <unsigned> b);
+/************************************************/
+
+/* Label related functions */
+void patchlabel(unsigned quad, unsigned label);
+void patchlabelBC(vector <unsigned> list, unsigned label);
+void backpatch(vector <unsigned> list, unsigned label);
+
+/************************************************/
 
 /* Scope space related functions */
 scopespace_t currscopespace(void);
@@ -193,10 +200,6 @@ unsigned getprogramVarOffset();
 unsigned getfunctionLocalOffset();
 unsigned getformalArgOffset();
 /************************************************/
-
-
-expr *lvalue_exp(Symbol *sym);
-
 
 /*Temp hidden variable related functions*/
 string newtempname();
