@@ -20,97 +20,14 @@ contbreaklists *BClist = new contbreaklists();
 stack <unsigned> LoopCounterStack;
 stack <unsigned> functionLocalStack;
 
+/************************ Quad related functions and variables ************************/
+
 void emit(iopcode op,expr *arg1,expr *arg2,expr *result,unsigned label,unsigned line){
     currQuad++;
     quads.push_back(quad(op,result,arg1,arg2,label,line));
 }
 
 unsigned int nextQuad(){return currQuad;}
-
-expr *emit_iftableitem(expr *e){
-    if(e->getType() != tableitem_e)
-        return e;
-    else{
-        expr *result = new expr(var_e);
-        result->insertSymbol(newtemp());
-        emit(tablegetelem,e,e->getIndex(),NULL,0,yylineno);
-        return result;
-    }
-}
-
-vector <unsigned> merge(vector <unsigned> a,vector <unsigned> b){
-    vector <unsigned> temp;
-    temp.reserve(a.size() + b.size());
-    temp.insert(temp.end() , a.begin() , a.end() );
-    temp.insert(temp.end() , b.begin() , b.end() );
-    return temp;
-}
-/*
-void expand(void){
-    assert(total==currQuad);
-    quad *p = new quad[NEW_SIZE];
-    if(quads){
-        memcpy(p,quads,CURR_SIZE);
-        free(quads);
-    }
-    quads = p;
-    total += EXPAND_SIZE;
-}
-*/
-
-void patchlabel(unsigned quad, unsigned label){
-	assert(quad < currQuad);
-    quads.at(quad).setLabel(label);
-}
-
-void patchlabelBC(vector <unsigned> list, unsigned label){
-    for(vector <unsigned>::iterator i=list.begin() ; i!=list.end() ; i++)
-        quads.at(*i).setLabel(label);
-}
-
-void backpatch(vector <unsigned> list, unsigned label){
-	
-	for(unsigned i=0 ; i<list.size() ; i++ ){
-		assert( list.at(i) < currQuad );
-        quads.at(list.at(i)).setLabel(label);
-
-	}
-}
-
-void checkuminus(expr *e){
-    if(e->getType()==constbool_e   || 
-       e->getType()==conststring_e || 
-       e->getType()==nil_e         || 
-       e->getType()==newtable_e    || 
-       e->getType()==programfunc_e || 
-       e->getType()==libraryfunc_e || 
-       e->getType()==boolexp_e )
-        cout << "[Intemediate Code] ERROR: Illegal expression to unary - , in line "<< yylineno << endl;
-
-       //comperror("Illegal expression to unary -");
-
-}
-
-expr *member_item(expr *lvalue,string name){
-    lvalue = emit_iftableitem(lvalue);
-    expr *item = new expr(tableitem_e);
-    item->insertSymbol(lvalue->getSymbol());
-    expr *temp = new expr(conststring_e);
-    temp->setstrConst(name);
-    item->setIndex(temp);
-    return item;
-}
-
-expr *make_call(expr *lvalue,elists *elist){
-    expr *func = emit_iftableitem(lvalue);
-    for (list <expr>::iterator i = elist->getElist()->begin() ; i!=elist->getElist()->end() ; i++)
-        emit(param,NULL,NULL,&*i,0,yylineno);
-    emit(call,NULL,NULL,func,0,yylineno);
-    expr *result = new expr(var_e);
-    result->insertSymbol(newtemp());
-    emit(getretval,NULL,NULL,result,0,yylineno);
-    return result;
-}
 
 void print_quads(){
 
@@ -224,9 +141,9 @@ void print_quads(){
     }
     cout <<  "-----------------------------------------------------------------------" << endl;
 }
-/************************************************/
+/*************************************************************************************/
 
-/* Expression related functions */
+/*************************** Expressions related functions ***************************/
 expr *lvalue_exp(Symbol *sym){
     assert(sym);
     expr *e;
@@ -239,9 +156,85 @@ expr *lvalue_exp(Symbol *sym){
     e->insertSymbol(sym);
     return e;
 }
-/************************************************/
 
-/* Scope space related functions and variables */
+expr *emit_iftableitem(expr *e){
+    if(e->getType() != tableitem_e)
+        return e;
+    else{
+        expr *result = new expr(var_e);
+        result->insertSymbol(newtemp());
+        emit(tablegetelem,e,e->getIndex(),NULL,0,yylineno);
+        return result;
+    }
+}
+
+expr *make_call(expr *lvalue,elists *elist){
+    expr *func = emit_iftableitem(lvalue);
+    for (list <expr>::iterator i = elist->getElist()->begin() ; i!=elist->getElist()->end() ; i++)
+        emit(param,NULL,NULL,&*i,0,yylineno);
+    emit(call,NULL,NULL,func,0,yylineno);
+    expr *result = new expr(var_e);
+    result->insertSymbol(newtemp());
+    emit(getretval,NULL,NULL,result,0,yylineno);
+    return result;
+}
+
+expr *member_item(expr *lvalue,string name){
+    lvalue = emit_iftableitem(lvalue);
+    expr *item = new expr(tableitem_e);
+    item->insertSymbol(lvalue->getSymbol());
+    expr *temp = new expr(conststring_e);
+    temp->setstrConst(name);
+    item->setIndex(temp);
+    return item;
+}
+
+void checkuminus(expr *e){
+    if(e->getType()==constbool_e   || 
+       e->getType()==conststring_e || 
+       e->getType()==nil_e         || 
+       e->getType()==newtable_e    || 
+       e->getType()==programfunc_e || 
+       e->getType()==libraryfunc_e || 
+       e->getType()==boolexp_e )
+        cout << "[Intemediate Code] ERROR: Illegal expression to unary - , in line "<< yylineno << endl;
+
+       //comperror("Illegal expression to unary -");
+
+}
+/*************************************************************************************/
+
+/****************************** Label related functions ******************************/
+void backpatch(vector <unsigned> list, unsigned label){
+	
+	for(unsigned i=0 ; i<list.size() ; i++ ){
+		assert( list.at(i) < currQuad );
+        quads.at(list.at(i)).setLabel(label);
+
+	}
+}
+
+void patchlabel(unsigned quad, unsigned label){
+	assert(quad < currQuad);
+    quads.at(quad).setLabel(label);
+}
+
+void patchlabelBC(vector <unsigned> list, unsigned label){
+    for(vector <unsigned>::iterator i=list.begin() ; i!=list.end() ; i++)
+        quads.at(*i).setLabel(label);
+}
+
+vector <unsigned> merge(vector <unsigned> a,vector <unsigned> b){
+    vector <unsigned> temp;
+    temp.reserve(a.size() + b.size());
+    temp.insert(temp.end() , a.begin() , a.end() );
+    temp.insert(temp.end() , b.begin() , b.end() );
+    return temp;
+}
+/*************************************************************************************/
+
+
+/******************* Scope space related functions and variables ********************/
 unsigned scopeSpaceCounter = 1;
 
 scopespace_t currscopespace(void){
@@ -252,9 +245,9 @@ scopespace_t currscopespace(void){
 
 void enterscopespace(void){++scopeSpaceCounter;}
 void exitscopespace(void){assert(scopeSpaceCounter>1);  --scopeSpaceCounter;}
-/************************************************/
+/*************************************************************************************/
 
-/*   Offset related functions and variables     */
+/********************** Offset related functions and variables ***********************/
 unsigned programVarOffset = 0;
 unsigned functionLocalOffset = 0;
 unsigned formalArgOffset = 0;
@@ -277,25 +270,18 @@ void inccurrscopeoffset(void){
     }
 }
 
+void resetformalargoffset(void){formalArgOffset = 0;}
+void resetfunctionlocaloffset(void){functionLocalOffset = 0;}
+
 unsigned getprogramVarOffset(){return programVarOffset; }
 unsigned getfunctionLocalOffset(){return functionLocalOffset;}
 unsigned getformalArgOffset(){return formalArgOffset;}
+/*************************************************************************************/
 
-
-void resetformalargoffset(void){formalArgOffset = 0;}
-
-void resetfunctionlocaloffset(void){functionLocalOffset = 0;}
-
-
-/************************************************/
-
-
-/*     Temp hidden variable related functions   */
+/********************* Temp hidden variable related functions ***********************/
 int tempcounter = 0;
 
 string newtempname() { return "@t" + to_string(tempcounter); } 
-
-void resettemp() { tempcounter = 0; } 
 
 Symbol *newtemp() {
     string name = newtempname();
@@ -308,10 +294,8 @@ Symbol *newtemp() {
     } 
     else return sym;
 }
+void resettemp() { tempcounter = 0; } 
 
 bool istempname(string s){return s.at(0)=='@';}
 bool istempexpr(expr *e){return (e->getSymbol()) && (e->getSymbol()->getType() == var_s) && (istempname(e->getSymbol()->getName()));}
-
-
-/************************************************/
-
+/*************************************************************************************/

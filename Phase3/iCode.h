@@ -164,25 +164,23 @@ typedef class contbreaklists {
 
 /* Quad related functions and variables*/
 void emit(iopcode op,expr *arg1,expr *arg2,expr *result,unsigned label,unsigned line);
-void expand(void);
 unsigned int nextQuad();
 void print_quads();
 /************************************************/
 
 /* Expressions related functions */
-expr *emit_iftableitem(expr *e);
 expr *lvalue_exp(Symbol *sym);
+expr *emit_iftableitem(expr *e);
 expr *member_item(expr *lvalue,string name);
 expr *make_call(expr *lvalue,elists *elist);
 void checkuminus(expr *e);
-vector <unsigned> merge(vector <unsigned> a,vector <unsigned> b);
 /************************************************/
 
 /* Label related functions */
+void backpatch(vector <unsigned> list, unsigned label);
 void patchlabel(unsigned quad, unsigned label);
 void patchlabelBC(vector <unsigned> list, unsigned label);
-void backpatch(vector <unsigned> list, unsigned label);
-
+vector <unsigned> merge(vector <unsigned> a,vector <unsigned> b);
 /************************************************/
 
 /* Scope space related functions */
