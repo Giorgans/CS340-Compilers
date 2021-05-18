@@ -164,6 +164,7 @@ typedef class contbreaklists {
 /* Quad related functions and variables*/
 void emit(iopcode op,expr *arg1,expr *arg2,expr *result,unsigned label,unsigned line);
 unsigned int nextQuad();
+string iopcode_to_string(iopcode op);
 void print_quads();
 /************************************************/
 

@@ -33,110 +33,93 @@ void print_quads(){
     cout <<  "quad#\topcode\t\tresult\t\targ1\t\targ2\tlabel" << endl;
     cout <<  "-----------------------------------------------------------------------" << endl;
     for(vector <quad>::iterator i=quads.begin() ;i!=quads.end() ;i++){
-        cout << count << ":\t" ;
-        if(i->getOp()==assign){
-            cout << "assign\t\t";
-
-            if(i->getResult()->getSymbol())
-                cout << i->getResult()->getSymbol()->getName() << "\t\t";
-
-
-            if(i->getArg1()->getSymbol() && i->getArg1()->getType() ==  boolexp_e)
-                cout << i->getArg1()->getSymbol()->getName();
-            else if(i->getArg1()->getSymbol() && i->getArg1()->getType() ==  var_e)
-                cout << i->getArg1()->getSymbol()->getName();
-            else if(i->getArg1()->getType() == costnum_e)
-                cout << i->getArg1()->getnumconst() << "\t\t";
-            else if(i->getArg1()->getType() == conststring_e)
-                cout << i->getArg1()->getstrConst() << "\t\t";
-            else if(i->getArg1()->getType() == boolexp_e){
-                if(i->getArg1()->getboolConst()) cout << "'true'\t\t" ;
-                else    cout << "'false'\t\t" ;
+        cout << count << ":\t" << iopcode_to_string(i->getOp()) << "\t\t";
+        if(i->getResult()){
+            if(!i->getResult()->getstrConst().empty())
+                cout << i->getResult()->getstrConst() << "\t\t" ; 
+            else if(i->getResult()->getType() == constbool_e){
+                if(i->getResult()->getboolConst()) cout << "'true'\t\t";
+                else cout << "'false'\t";
             }
-        }
-        if(i->getOp()==jump){
-            cout << "jump\t\t";
-            cout << i->getLabel();
-        }
-        if(i->getOp()==if_lesseq){
-            cout << "if_lesseq\t\t\t\t";
-            //if(i->getResult()) cout << i->getResult()->getSymbol()->getName() << "\t\t" ;
-            if(i->getArg1() && i->getArg1()->getType()==var_e)   cout << i->getArg1()->getSymbol()->getName() << "\t\t" ;
-            if(i->getArg1() && i->getArg1()->getType()==costnum_e)   cout << i->getArg1()->getnumconst() << "\t\t" ;
-            
-            if(i->getArg2() && i->getArg2()->getType()==var_e)   cout << i->getArg2()->getSymbol()->getName() << "\t" ;
-            if(i->getArg2() && i->getArg2()->getType()==costnum_e)   cout << i->getArg2()->getnumconst() << "\t" ;
-            cout << i->getLabel();
-        }
-        if(i->getOp()==if_greatereq){
-            cout << "if_greatereq\t\t\t";
-            //if(i->getResult()) cout << i->getResult()->getSymbol()->getName() << "\t\t" ;
-            if(i->getArg1() && i->getArg1()->getType()==var_e)   cout << i->getArg1()->getSymbol()->getName() << "\t\t" ;
-            if(i->getArg1() && i->getArg1()->getType()==costnum_e)   cout << i->getArg1()->getnumconst() << "\t\t" ;
-            
-            if(i->getArg2() && i->getArg2()->getType()==var_e)   cout << i->getArg2()->getSymbol()->getName() << "\t" ;
-            if(i->getArg2() && i->getArg2()->getType()==costnum_e)   cout << i->getArg2()->getnumconst() << "\t" ;
-            cout << i->getLabel();
+            else if(i->getResult()->getType() == costnum_e)
+                cout << i->getResult()->getnumconst() << "\t\t" ;
 
+            else if(i->getResult()->getSymbol() )
+                cout << i->getResult()->getSymbol()->getName() << "\t\t" ;
         }
-        if(i->getOp()==if_less){
-            cout << "if_less\t\t";
-            //if(i->getResult()) cout << i->getResult()->getSymbol()->getName() << "\t\t" ;
-            if(i->getArg1() && i->getArg1()->getType()==var_e)   cout << i->getArg1()->getSymbol()->getName() << "\t\t" ;
-            if(i->getArg1() && i->getArg1()->getType()==costnum_e)   cout << i->getArg1()->getnumconst() << "\t\t" ;
-            
-            if(i->getArg2() && i->getArg2()->getType()==var_e)   cout << i->getArg2()->getSymbol()->getName() << "\t" ;
-            if(i->getArg2() && i->getArg2()->getType()==costnum_e)   cout << i->getArg2()->getnumconst() << "\t" ;
-            cout << i->getLabel();
-        }
-        if(i->getOp()==if_greater){
-            cout << "if_greater\t\t";
-            //if(i->getResult()) cout << i->getResult()->getSymbol()->getName() << "\t\t" ;
-            if(i->getArg1() && i->getArg1()->getType()==var_e)   cout << i->getArg1()->getSymbol()->getName() << "\t\t" ;
-            if(i->getArg1() && i->getArg1()->getType()==costnum_e)   cout << i->getArg1()->getnumconst() << "\t\t" ;
-            
-            if(i->getArg2() && i->getArg2()->getType()==var_e)   cout << i->getArg2()->getSymbol()->getName() << "\t" ;
-            if(i->getArg2() && i->getArg2()->getType()==costnum_e)   cout << i->getArg2()->getnumconst() << "\t" ;
-            cout << i->getLabel();
-        }
-        if(i->getOp()==if_eq){
-            cout << "if_eq\t\t";
-            //if(i->getResult()) cout << i->getResult()->getSymbol()->getName() << "\t\t" ;
-            if(i->getArg1() && i->getArg1()->getType()==var_e)   cout << i->getArg1()->getSymbol()->getName() << "\t\t" ;
-            if(i->getArg1() && i->getArg1()->getType()==costnum_e)   cout << i->getArg1()->getnumconst() << "\t\t" ;
-            
-            if(i->getArg2() && i->getArg2()->getType()==var_e)   cout << i->getArg2()->getSymbol()->getName() << "\t" ;
-            if(i->getArg2() && i->getArg2()->getType()==costnum_e)   cout << i->getArg2()->getnumconst() << "\t" ;
-            cout << i->getLabel();
-        }
-        if(i->getOp()==if_noteq){
-            cout << "if_noteq\t\t";
-            //if(i->getResult()) cout << i->getResult()->getSymbol()->getName() << "\t\t" ;
-            if(i->getArg1() && i->getArg1()->getType()==var_e)   cout << i->getArg1()->getSymbol()->getName() << "\t\t" ;
-            if(i->getArg1() && i->getArg1()->getType()==costnum_e)   cout << i->getArg1()->getnumconst() << "\t\t" ;
-            
-            if(i->getArg2() && i->getArg2()->getType()==var_e)   cout << i->getArg2()->getSymbol()->getName() << "\t" ;
-            if(i->getArg2() && i->getArg2()->getType()==costnum_e)   cout << i->getArg2()->getnumconst() << "\t" ;
-            cout << i->getLabel();
-        }
-        
-        
-        if(i->getOp()==add){ 
-            cout << "add\t\t";
-            if(i->getResult()) cout << i->getResult()->getSymbol()->getName() << "\t\t" ;
-            if(i->getArg1())   cout << i->getArg1()->getnumconst() << "\t\t" ;
-            if(i->getArg2())   cout << i->getArg2()->getnumconst() ;
-        }
-        if(i->getOp()==sub) cout << "sub\t\t";
-        if(i->getOp()==mul) cout << "mul\t\t";
-        if(i->getOp()==divide) cout << "divide\t\t";
-        if(i->getOp()==mod) cout << "mod\t\t";
+        else cout << "\t\t";
 
-        count++;
-        cout << endl;
+        if(i->getArg1()){
+            if(!i->getArg1()->getstrConst().empty())
+                cout << i->getArg1()->getstrConst() << "\t\t" ; 
+            else if(i->getArg1()->getType() == constbool_e){
+                if(i->getArg1()->getboolConst()) cout << "'true'\t\t";
+                else cout << "'false'\t";
+            }
+            else if(i->getArg1()->getType() == costnum_e)
+                cout << i->getArg1()->getnumconst() << "\t\t" ;
+
+            else if(i->getArg1()->getSymbol())
+                cout << i->getArg1()->getSymbol()->getName() << "\t\t" ;
+        }
+        else cout << "\t\t";
+
+        if(i->getArg2()){
+            if(!i->getArg2()->getstrConst().empty())
+                cout << i->getArg2()->getstrConst() << "\t" ; 
+            else if(i->getArg2()->getType() == constbool_e){
+                if(i->getArg2()->getboolConst()) cout << "'true'\t";
+                else cout << "'false'\t";
+            }
+            else if(i->getArg2()->getType() == costnum_e)
+                cout << i->getArg2()->getnumconst() << "\t" ;
+
+            else if(i->getArg2()->getSymbol())
+                cout << i->getArg2()->getSymbol()->getName() << "\t" ;
+        }
+        else cout << "\t";
+
+        if(i->getLabel()>0) cout << i->getLabel() << "\t";
+        cout << "\n";
+        count++; 
     }
+    
     cout <<  "-----------------------------------------------------------------------" << endl;
 }
+
+string iopcode_to_string(iopcode op)
+{
+    switch(op){
+        case assign: return "assign";
+        case add: return "add"; 
+        case sub: return "sub";
+        case mul: return "mul";
+        case divide: return "div";
+        case mod: return "mod"; 
+        case uminus: return "uminus";
+        case andb: return "and";
+        case orb: return "or";
+        case notb: return "not";
+        case if_eq: return "if_eq";
+        case if_noteq: return "if_not";
+        case if_lesseq: return "if_leq";
+        case if_greatereq: return "if_greq";
+        case if_less: return "if_less"; 
+        case if_greater: return "if_gr"; 
+        case call: return "call";
+        case param: return "param";
+        case ret: return "ret";
+        case getretval: return "getretval";
+        case funcstart: return "funcstart";
+        case funcend: return "funcend";
+        case tablecreate: return "table_cr";
+        case tablegetelem: return "table_get"; 
+        case tablesetelem: return "table_set"; 
+        case jump: return "jump";
+        default: return "NILL";
+    }
+}
+
 /*************************************************************************************/
 
 /*************************** Expressions related functions ***************************/

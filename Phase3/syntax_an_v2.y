@@ -98,12 +98,24 @@ bool isMember=false;
 program: stmts ;
 
 stmts: stmts stmt{
-    $$->setBreakList(merge($1->getBreakList(),$2->getBreakList()));
-    $$->setContList(merge($1->getContList(),$2->getContList()));
-} | stmt {$$=$1;} ;
+    if($$==NULL){
+        $$ = new contbreaklists();
+        $1 = new contbreaklists();
+    }
+    //$$->setBreakList(merge($1->getBreakList(),$2->getBreakList()));
+    //$$->setContList(merge($1->getContList(),$2->getContList()));
+} |  ;
 
-stmt:  exp SEMICOLON  {resettemp();}
-      |  if_stmt 
+stmt:  exp SEMICOLON  {
+            $$ = new contbreaklists();
+            resettemp();
+        }
+      |  if_stmt {
+            $$ = new contbreaklists();
+            //$$->setBreakList(merge($$->getBreakList(),$1->getBreakList()));
+            //$$->setContList(merge($$->getContList(),$1->getContList()));
+
+      }
       | {loop_open++;} while_stmt {loop_open--;} 
       | {loop_open++;} for_stmt {loop_open--;} 
       | ret_stmt 
@@ -119,7 +131,7 @@ stmt:  exp SEMICOLON  {resettemp();}
           $$->insertContList(nextQuad());
           emit(jump,NULL,NULL,NULL,0,yylineno);
       }
-      | block 
+      | block {  $$ = $1;}
       | f_def 
       | SEMICOLON ;
 
@@ -153,60 +165,60 @@ exp: assign_exp {$$=$1;}
     | exp LESS_THAN exp{
         $$ = new expr(boolexp_e);
         $$->insertSymbol(newtemp());
-        emit(if_less, $1, $3, $$, nextQuad()+3, yylineno);
+        emit(if_less, $1, $3, NULL, nextQuad()+4, yylineno);
 
-        expr *temp=new expr(boolexp_e);
+        expr *temp=new expr(constbool_e);
         temp->setboolConst(false);
         emit(assign,temp,NULL,$$,0,yylineno); 
 
         emit(jump,NULL,NULL,NULL,nextQuad()+3,yylineno);
 
-        temp=new expr(boolexp_e);
+        temp=new expr(constbool_e);
         temp->setboolConst(true);
         emit(assign,temp,NULL,$$,0,yylineno); 
     }
     | exp GREATER_THAN exp{
         $$ = new expr(boolexp_e);
         $$->insertSymbol(newtemp());
-        emit(if_greater, $1, $3, $$, nextQuad()+3, yylineno);
+        emit(if_greater, $1, $3, NULL, nextQuad()+4, yylineno);
 
-        expr *temp=new expr(boolexp_e);
+        expr *temp=new expr(constbool_e);
         temp->setboolConst(false);
         emit(assign,temp,NULL,$$,0,yylineno); 
 
         emit(jump,NULL,NULL,NULL,nextQuad()+3,yylineno);
 
-        temp=new expr(boolexp_e);
+        temp=new expr(constbool_e);
         temp->setboolConst(true);
         emit(assign,temp,NULL,$$,0,yylineno); 
     }
     | exp LESS_EQUAL exp{
         $$ = new expr(boolexp_e);
         $$->insertSymbol(newtemp());
-        emit(if_lesseq, $1, $3, $$, nextQuad()+4, yylineno);
+        emit(if_lesseq, $1, $3, NULL, nextQuad()+4, yylineno);
 
-        expr *temp=new expr(boolexp_e);
+        expr *temp=new expr(constbool_e);
         temp->setboolConst(false);
         emit(assign,temp,NULL,$$,0,yylineno); 
 
         emit(jump,NULL,NULL,NULL,nextQuad()+4,yylineno);
 
-        temp=new expr(boolexp_e);
+        temp=new expr(constbool_e);
         temp->setboolConst(true);
         emit(assign,temp,NULL,$$,0,yylineno); 
     }
     | exp GREATER_EQUAL exp {
         $$ = new expr(boolexp_e);
         $$->insertSymbol(newtemp());
-        emit(if_greatereq, $1, $3, $$, nextQuad()+4, yylineno);
+        emit(if_greatereq, $1, $3, NULL, nextQuad()+4, yylineno);
 
-        expr *temp=new expr(boolexp_e);
+        expr *temp=new expr(constbool_e);
         temp->setboolConst(false);
         emit(assign,temp,NULL,$$,0,yylineno); 
 
         emit(jump,NULL,NULL,NULL,nextQuad()+3,yylineno);
 
-        temp=new expr(boolexp_e);
+        temp=new expr(constbool_e);
         temp->setboolConst(true);
         emit(assign,temp,NULL,$$,0,yylineno); 
     }
@@ -236,13 +248,13 @@ exp: assign_exp {$$=$1;}
         $$->insertSymbol(newtemp());
         emit(if_eq, $1, $3, $$, nextQuad()+4, yylineno);
 
-        expr *temp=new expr(boolexp_e);
+        expr *temp=new expr(constbool_e);
         temp->setboolConst(false);
         emit(assign,temp,NULL,$$,0,yylineno); 
 
         emit(jump,NULL,NULL,NULL,nextQuad()+3,yylineno);
 
-        temp=new expr(boolexp_e);
+        temp=new expr(constbool_e);
         temp->setboolConst(true);
         emit(assign,temp,NULL,$$,0,yylineno); 
     }
@@ -251,13 +263,13 @@ exp: assign_exp {$$=$1;}
         $$->insertSymbol(newtemp());
         emit(if_noteq, $1, $3, $$, nextQuad()+4, yylineno);
 
-        expr *temp=new expr(boolexp_e);
+        expr *temp=new expr(constbool_e);
         temp->setboolConst(false);
         emit(assign,temp,NULL,$$,0,yylineno); 
 
         emit(jump,NULL,NULL,NULL,nextQuad()+3,yylineno);
 
-        temp=new expr(boolexp_e);
+        temp=new expr(constbool_e);
         temp->setboolConst(true);
         emit(assign,temp,NULL,$$,0,yylineno); 
     } 
@@ -413,18 +425,17 @@ lvalue: ID {
             }
 
             if(!found){
-                table.Insert(new Symbol(var_s,$1,currscopespace(),scope,yylineno,currscopeoffset()));
+                symbol = new Symbol(var_s,$1,currscopespace(),scope,yylineno,currscopeoffset());
+                table.Insert(symbol);
+                $$ = lvalue_exp(symbol);
             }
             else{
-                temp=table.LookupScope($1,temp_scope);
+                symbol=table.LookupScope($1,temp_scope);
                 if(temp!=NULL && temp->IsActive() && !loop_open && func_open && scope>temp_scope && !isMember && temp->getType()==var_s)
                     cout << "[Syntax Analysis] ERROR: Cannot access \"" << $1 << "\", in line " << yylineno << endl;
-                
+                $$ = lvalue_exp(symbol);
             }
-            symbol=table.LookupScope($1,scope);
-            $$ = lvalue_exp(symbol);
             
-
 }
     |   LOCAL ID {
             Symbol *symbol,*temp;
@@ -512,7 +523,7 @@ indexed: index_el
 
 index_el: L_BRACE exp COLON exp R_BRACE ;
 
-block: L_BRACE {scope++;} stmts  R_BRACE {table.Hide(scope); scope--;};
+block: L_BRACE {scope++;} stmts   R_BRACE {table.Hide(scope); scope--; $$ = $3;};
 
 funcblockstart: {LoopCounterStack.push(loopcounter); loopcounter=0; };
 
@@ -619,17 +630,17 @@ idlist: ID {
     | ;
 
 if_stmt: if_prefix stmt {
-        patchlabel($1, nextQuad());
+        patchlabel($1, nextQuad()+1);
     }
     | if_prefix stmt else_prefix stmt {
-        patchlabel($1,$3+1); 
-        patchlabel($3, nextQuad());        
+        patchlabel($1,$3+2); 
+        patchlabel($3, nextQuad()+1);        
 } ;
 
 if_prefix: IF L_PARENTHESIS exp R_PARENTHESIS{
     expr *temp = new expr(constbool_e);
     temp->setboolConst(true);
-    emit(if_eq, $3, temp,NULL, nextQuad()+2 , yylineno); 
+    emit(if_eq, $3, temp,NULL, nextQuad()+3 , yylineno); 
     $$ = nextQuad();
     emit(jump,NULL,NULL,NULL,0,yylineno);
 } ;
