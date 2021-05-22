@@ -73,7 +73,7 @@ bool partial=false;
 /*Tokens for break and continue lists*/
 %type <BCLists> stmts stmt if_stmt while_stmt for_stmt ret_stmt block loopstmt
 /*Tokens for calls*/
-%type <Call> normcall methodcall callsuffix
+%type <Call> normcall methodcall callsuffix 
 /*Tokens for keywords*/
 %token IF ELSE WHILE FOR FUNCTION RETURN BREAK CONTINUE AND NOT OR LOCAL TRUE FALSE NIL
 /*Tokens for operators*/
@@ -225,7 +225,29 @@ exp: assign_exp {$$=$1;}
 
     }
     | exp AND M exp {
-        /*cout << "\nM value: " << $3 ; 
+ 
+        
+        if($1->getType()!=boolexp_e){
+            expr *temp = new expr(constbool_e);
+            temp->setboolConst(true);
+            emit(if_eq,$1,temp,NULL ,0, yylineno);
+        
+            emit(jump,NULL,NULL,NULL,0,yylineno);
+            $3 = nextQuad();
+        }
+        if($4->getType()!=boolexp_e){
+            expr *temp = new expr(constbool_e);
+            temp->setboolConst(true);
+            $4->insertTrueLabel(nextQuad());
+            emit(if_eq,$4,temp,NULL ,0, yylineno);
+        
+            $4->insertFalseLabel(nextQuad());
+            emit(jump,NULL,NULL,NULL,0,yylineno);
+        }
+
+
+
+       cout << "\nM value: " << $3 ; 
         cout << "\nAND E1 TRUE LIST:" << "\t" ;
 	    for(unsigned i=0 ; i<$1->getTrueList().size() ; i++ )
             cout <<  $1->getTrueList().at(i);
@@ -239,20 +261,22 @@ exp: assign_exp {$$=$1;}
         cout << "\nAND E2 FALSE LIST:" << "\t" ;
 	    for(unsigned i=0 ; i<$4->getFalseList().size() ; i++ )
             cout <<  $4->getFalseList().at(i);
-        cout << "\n";*/
-        
+        cout << "\n";        
+
         for(int i=0 ;i<$1->getTrueList().size() ; i++)
             backpatch($3,$1->getTrueList().at(i));
+        
         $$ = new expr(boolexp_e);
         $$->insertSymbol(newtemp());
-            $$->setTrueList($4->getTrueList());
-            $$->setFalseList(merge($1->getFalseList(),$4->getFalseList() ));
-        /*cout << "\nAND E TRUE LIST" << "\t" ;
+        $$->setTrueList($4->getTrueList());
+        $$->setFalseList(merge($1->getFalseList(),$4->getFalseList() ));
+        
+        cout << "\nAND E TRUE LIST" << "\t" ;
 	    for(unsigned i=0 ; i<$$->getTrueList().size() ; i++ )
             cout <<  $$->getTrueList().at(i) << " ";
         cout << "\nAND E FALSE LIST" << "\t" ;
 	    for(unsigned i=0 ; i<$$->getFalseList().size() ; i++ )
-            cout <<  $$->getFalseList().at(i) << " ";*/
+            cout <<  $$->getFalseList().at(i) << " ";
     }
     | exp OR M exp {
         /*cout << "\n\nM value: " << $3 ; 
@@ -315,11 +339,17 @@ term: L_PARENTHESIS exp R_PARENTHESIS {$$=$2;}
         emit(uminus,$2,NULL,$$,0,yylineno);
     }
     | NOT exp {
-        $$ = new expr(boolexp_e);
-        $$->insertSymbol(newtemp());
-        emit(notb,$2,NULL,$$,0,yylineno);
+        $$=$2;
+        vector <unsigned> templist = $2->getTrueList();
         $$->setTrueList($2->getFalseList());
-        $$->setFalseList($2->getTrueList());
+        $$->setFalseList(templist);
+
+        cout << "\nnot E TRUE LIST" << "\t" ;
+	    for(unsigned i=0 ; i<$$->getTrueList().size() ; i++ )
+            cout <<  $$->getTrueList().at(i) << " ";
+        cout << "\nnot E FALSE LIST" << "\t" ;
+	    for(unsigned i=0 ; i<$$->getFalseList().size() ; i++ )
+            cout <<  $$->getFalseList().at(i) << " ";
     }
     | PLUS_PLUS lvalue {
         Symbol *symbol=table.Lookup($2->getSymbol()->getName());
@@ -331,7 +361,7 @@ term: L_PARENTHESIS exp R_PARENTHESIS {$$=$2;}
             expr *temp = new expr(costnum_e);
             temp->setnumconst(1);
             emit(add,$$,temp,$$,0,yylineno);
-            emit(tablesetelem,$2,$2->getIndex(),$$,0,yylineno);
+            emit(tablesetelem,$2->getIndex(),$$,$2,0,yylineno);
         }
         else{
             expr *temp = new expr(costnum_e);
@@ -356,7 +386,7 @@ term: L_PARENTHESIS exp R_PARENTHESIS {$$=$2;}
             temp->setnumconst(1);
             emit(assign,value,NULL,$$,0,yylineno);
             emit(add,value,temp,value,0,yylineno);
-            emit(tablesetelem,$1,$1->getIndex(),value,0,yylineno);
+            emit(tablesetelem,$1->getIndex(),value,$1,0,yylineno);
         }
         else{
             emit(assign,$1,NULL,$$,0,yylineno);
@@ -375,7 +405,7 @@ term: L_PARENTHESIS exp R_PARENTHESIS {$$=$2;}
             expr *temp = new expr(costnum_e);
             temp->setnumconst(-1);
             emit(add,$$,temp,$$,0,yylineno);
-            emit(tablesetelem,$2,$2->getIndex(),$$,0,yylineno);
+            emit(tablesetelem,$2->getIndex(),$$,$2,0,yylineno);
         }
         else{
             expr *temp = new expr(costnum_e);
@@ -399,7 +429,7 @@ term: L_PARENTHESIS exp R_PARENTHESIS {$$=$2;}
             temp->setnumconst(-1);
             emit(assign,value,NULL,$$,0,yylineno);
             emit(add,value,temp,value,0,yylineno);
-            emit(tablesetelem,$1,$1->getIndex(),value,0,yylineno);
+            emit(tablesetelem,$1->getIndex(),value,$1,0,yylineno);
         }
         else{
             emit(assign,$1,NULL,$$,0,yylineno);
@@ -441,8 +471,10 @@ assign_exp: lvalue ASSIGN exp {
             emit(assign,temp,NULL,$3,0,yylineno); 
         }
 
-        if($1->getType()==tableitem_e)
-            emit(tablesetelem,$1,$1->getIndex(),$3,0,yylineno);
+        if($1->getType()==tableitem_e){
+            emit(tablesetelem,$1->getIndex(),$3,$1,0,yylineno);
+            $$=emit_iftableitem($1);
+        }
         else{
             emit(assign,$3,NULL,$1,0,yylineno);
             $$ = new expr(assignexp_e);
@@ -530,11 +562,11 @@ call: call L_PARENTHESIS elist R_PARENTHESIS { $$ = make_call($1,$3); }
     | lvalue callsuffix {
         if($2->getMethod()){
             expr *self = $1;
-            //$1 = emit_iftableitem(member_item(self,$2->getName()));  // TO DO!
+            $1 = emit_iftableitem(member_item(self,$2->getName()));  // TO DO!
             $2->getElist()->pushfrontElistItem(self);
         }
-        $$ = make_call($1,$2->getElist());
 
+        $$ = make_call($1,$2->getElist());
     }
     | L_PARENTHESIS f_def R_PARENTHESIS L_PARENTHESIS elist R_PARENTHESIS{
         expr *func = new expr(programfunc_e);
@@ -545,7 +577,7 @@ call: call L_PARENTHESIS elist R_PARENTHESIS { $$ = make_call($1,$3); }
 callsuffix: normcall {$$=$1;}
     | methodcall {$$=$1;} ;
 
-normcall: L_PARENTHESIS elist R_PARENTHESIS { $$ = new calls("nil",false,$2);};
+normcall: L_PARENTHESIS elist R_PARENTHESIS { $$ = new calls("nil",false,$2);  };
 
 methodcall: DOUBLE_DOT ID L_PARENTHESIS elist R_PARENTHESIS {
     $$ = new calls($2,true,$4);
@@ -553,7 +585,7 @@ methodcall: DOUBLE_DOT ID L_PARENTHESIS elist R_PARENTHESIS {
 
 elist: exp {$$=new elists($1);}
     | elist COMMA exp {$$=$1; $$->insertElistItem($3);}
-    | {}; 
+    | {$$=new elists();}; 
 
 obj_def:  L_BRACKET indexed R_BRACKET 
     | L_BRACKET elist R_BRACKET {
@@ -565,7 +597,7 @@ obj_def:  L_BRACKET indexed R_BRACKET
             tempi = new expr(costnum_e);
             count++;
             tempi->setnumconst(count);
-            emit(tablesetelem,temp,tempi,&*i,0,yylineno);
+            emit(tablesetelem,tempi,temp,&*i,0,yylineno);
         }
         $$ = temp;
     }  ;
@@ -646,10 +678,14 @@ const:  INTCONST {
         | TRUE {
                     $$ = new expr(constbool_e);
                     $$->setboolConst(true);
+                    $$->insertTrueLabel(getTempQuad());
+                    tempemit();
+                    tempemit();
                 } 
         | FALSE {
                     $$ = new expr(constbool_e);
                     $$->setboolConst(false);
+                    $$->insertFalseLabel(nextQuad());
                 } ;
 
 idlist: ID {

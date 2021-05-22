@@ -127,7 +127,9 @@ typedef class elists{
         list <expr> *getElist(){return this->elist;}
         void insertElistItem(expr *e){this->elist->push_back(*e);}
         void pushfrontElistItem(expr *e){this->elist->push_front(*e);}
+    elists(){this->elist = new list<expr>();}
     elists(expr *e){
+        this->elist = new list<expr>();
         this->elist->push_back(*e);
     }
 }elists;
@@ -166,6 +168,9 @@ typedef class contbreaklists {
 /* Quad related functions and variables*/
 void emit(iopcode op,expr *arg1,expr *arg2,expr *result,unsigned label,unsigned line);
 void emit_stack(quad tquad);
+void tempemit();
+unsigned int getTempQuad();
+void resetTempQuad();
 unsigned int nextQuad();
 string iopcode_to_string(iopcode op);
 void print_quads();

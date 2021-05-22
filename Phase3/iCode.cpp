@@ -11,9 +11,8 @@ extern int yylineno,scope;
 
 /***   Quad related functions and variables */
 unsigned int currQuad = 0;
-unsigned int tempVar = 0;
+unsigned int tempQuad = 0;
 vector <quad> quads;
-stack <quad> quadStack;
 contbreaklists *BClist = new contbreaklists();
 stack <unsigned> LoopCounterStack;
 stack <unsigned> functionLocalStack;
@@ -23,11 +22,15 @@ void emit(iopcode op,expr *arg1,expr *arg2,expr *result,unsigned label,unsigned 
     currQuad++;
     quads.push_back(quad(op,result,arg1,arg2,label,line));
 }
-
-void emit_stack(quad tquad){
-    quadStack.push(tquad);
+void tempemit(){
+    if(tempQuad) tempQuad = currQuad +1;
+    else tempQuad++;
 }
 
+
+unsigned int getTempQuad(){return tempQuad;}
+
+void resetTempQuad(){tempQuad = 0;}
 
 unsigned int nextQuad(){return currQuad;}
 
@@ -118,9 +121,9 @@ string iopcode_to_string(iopcode op)
         case getretval: return "getretval";
         case funcstart: return "funcstart";
         case funcend: return "funcend";
-        case tablecreate: return "table_cr";
-        case tablegetelem: return "table_get"; 
-        case tablesetelem: return "table_set"; 
+        case tablecreate: return "tbl_cr";
+        case tablegetelem: return "tbl_get"; 
+        case tablesetelem: return "tbl_set"; 
         case jump: return "jump";
         default: return "NILL";
     }
@@ -139,6 +142,11 @@ expr *lvalue_exp(Symbol *sym){
         default: assert(0);
     }
     e->insertSymbol(sym);
+    
+    e->insertTrueLabel(getTempQuad());
+    tempemit();
+    e->insertFalseLabel(getTempQuad()+1);
+    tempemit();
     return e;
 }
 
@@ -148,15 +156,17 @@ expr *emit_iftableitem(expr *e){
     else{
         expr *result = new expr(var_e);
         result->insertSymbol(newtemp());
-        emit(tablegetelem,e,e->getIndex(),NULL,0,yylineno);
+        emit(tablegetelem,e,e->getIndex(),result,0,yylineno);
         return result;
     }
 }
 
 expr *make_call(expr *lvalue,elists *elist){
     expr *func = emit_iftableitem(lvalue);
-    for (list <expr>::iterator i = elist->getElist()->begin() ; i!=elist->getElist()->end() ; i++)
+    for (list <expr>::iterator i = elist->getElist()->begin() ; i!=elist->getElist()->end() ; i++){
         emit(param,NULL,NULL,&*i,0,yylineno);
+    }
+cout << "MOIRAZA paketa" << endl;
     emit(call,NULL,NULL,func,0,yylineno);
     expr *result = new expr(var_e);
     result->insertSymbol(newtemp());
