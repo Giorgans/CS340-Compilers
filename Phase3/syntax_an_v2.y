@@ -30,6 +30,7 @@ extern stack <unsigned> functionLocalStack;
 unsigned int scope=0,loop_open=0,func_open=0,func_id_num=0;
 unsigned loopcounter = 0;
 bool isMember=false;
+bool partial=false;
 
 %}
 
@@ -107,9 +108,26 @@ stmts: stmts stmt{
 } |  ;
 
 stmt:  exp SEMICOLON  {
-            $$ = new contbreaklists();
             resettemp();
+        expr *temp=new expr(constbool_e);
+        temp->setboolConst(false);
+        if($1->getType()==boolexp_e){
+            /*Backpatching falselist*/
+            for(int i=0 ;i<$1->getFalseList().size() ; i++)
+                backpatch(nextQuad(),$1->getFalseList().at(i));
+        
+            emit(assign,temp,NULL,$1,0,yylineno);
+            emit(jump,NULL,NULL,NULL,nextQuad()+3,yylineno);
+        
+            /*Backpatching truelist*/
+            for(int i=0 ;i<$1->getTrueList().size() ; i++)
+                backpatch(nextQuad(),$1->getTrueList().at(i));
+            
+            temp=new expr(constbool_e);
+            temp->setboolConst(true);
+            emit(assign,temp,NULL,$1,0,yylineno); 
         }
+    }
       |  if_stmt {
             $$ = new contbreaklists();
             //$$->setBreakList(merge($$->getBreakList(),$1->getBreakList()));
@@ -165,113 +183,127 @@ exp: assign_exp {$$=$1;}
     | exp LESS_THAN exp{
         $$ = new expr(boolexp_e);
         $$->insertSymbol(newtemp());
-        emit(if_less, $1, $3, NULL, nextQuad()+4, yylineno);
+        
+        $$->insertTrueLabel(nextQuad());
+        emit(if_less,$1,$3,NULL ,0, yylineno);
+ 
+        $$->insertFalseLabel(nextQuad());
+        emit(jump,NULL,NULL,NULL,0,yylineno);
 
-        expr *temp=new expr(constbool_e);
-        temp->setboolConst(false);
-        emit(assign,temp,NULL,$$,0,yylineno); 
-
-        emit(jump,NULL,NULL,NULL,nextQuad()+3,yylineno);
-
-        temp=new expr(constbool_e);
-        temp->setboolConst(true);
-        emit(assign,temp,NULL,$$,0,yylineno); 
     }
     | exp GREATER_THAN exp{
         $$ = new expr(boolexp_e);
         $$->insertSymbol(newtemp());
-        emit(if_greater, $1, $3, NULL, nextQuad()+4, yylineno);
+       
+        $$->insertTrueLabel(nextQuad());
+        emit(if_greater,$1,$3,NULL ,0, yylineno);
+        
+        $$->insertFalseLabel(nextQuad());
+        emit(jump,NULL,NULL,NULL,0,yylineno);
 
-        expr *temp=new expr(constbool_e);
-        temp->setboolConst(false);
-        emit(assign,temp,NULL,$$,0,yylineno); 
-
-        emit(jump,NULL,NULL,NULL,nextQuad()+3,yylineno);
-
-        temp=new expr(constbool_e);
-        temp->setboolConst(true);
-        emit(assign,temp,NULL,$$,0,yylineno); 
     }
     | exp LESS_EQUAL exp{
         $$ = new expr(boolexp_e);
         $$->insertSymbol(newtemp());
-        emit(if_lesseq, $1, $3, NULL, nextQuad()+4, yylineno);
+        
+        $$->insertTrueLabel(nextQuad());
+        emit(if_lesseq,$1,$3,NULL ,0, yylineno);
+        
+        $$->insertFalseLabel(nextQuad());
+        emit(jump,NULL,NULL,NULL,0,yylineno);
 
-        expr *temp=new expr(constbool_e);
-        temp->setboolConst(false);
-        emit(assign,temp,NULL,$$,0,yylineno); 
-
-        emit(jump,NULL,NULL,NULL,nextQuad()+4,yylineno);
-
-        temp=new expr(constbool_e);
-        temp->setboolConst(true);
-        emit(assign,temp,NULL,$$,0,yylineno); 
     }
     | exp GREATER_EQUAL exp {
         $$ = new expr(boolexp_e);
         $$->insertSymbol(newtemp());
-        emit(if_greatereq, $1, $3, NULL, nextQuad()+4, yylineno);
+        
+        $$->insertTrueLabel(nextQuad());
+        emit(if_greatereq,$1,$3,NULL ,0, yylineno);
+        
+        $$->insertFalseLabel(nextQuad());
+        emit(jump,NULL,NULL,NULL,0,yylineno);
 
-        expr *temp=new expr(constbool_e);
-        temp->setboolConst(false);
-        emit(assign,temp,NULL,$$,0,yylineno); 
-
-        emit(jump,NULL,NULL,NULL,nextQuad()+3,yylineno);
-
-        temp=new expr(constbool_e);
-        temp->setboolConst(true);
-        emit(assign,temp,NULL,$$,0,yylineno); 
     }
     | exp AND M exp {
+        /*cout << "\nM value: " << $3 ; 
+        cout << "\nAND E1 TRUE LIST:" << "\t" ;
+	    for(unsigned i=0 ; i<$1->getTrueList().size() ; i++ )
+            cout <<  $1->getTrueList().at(i);
+        cout << "\nAND E2 TRUE LIST:" << "\t" ;
+	    for(unsigned i=0 ; i<$4->getTrueList().size() ; i++ )
+            cout <<  $4->getTrueList().at(i);
+	    
+        cout << "\nAND E1 FALSE LIST:" << "\t" ;
+	    for(unsigned i=0 ; i<$1->getFalseList().size() ; i++ )
+            cout <<  $1->getFalseList().at(i);
+        cout << "\nAND E2 FALSE LIST:" << "\t" ;
+	    for(unsigned i=0 ; i<$4->getFalseList().size() ; i++ )
+            cout <<  $4->getFalseList().at(i);
+        cout << "\n";*/
+        
+        for(int i=0 ;i<$1->getTrueList().size() ; i++)
+            backpatch($3,$1->getTrueList().at(i));
         $$ = new expr(boolexp_e);
         $$->insertSymbol(newtemp());
-        emit(andb, $1, $4, $$, 0, yylineno);
-       
-        backpatch($1->getTrueList(),$3);
-        $$->setTrueList($4->getTrueList());
-        $$->setFalseList(merge($1->getFalseList(),$4->getFalseList()));
-
-
+            $$->setTrueList($4->getTrueList());
+            $$->setFalseList(merge($1->getFalseList(),$4->getFalseList() ));
+        /*cout << "\nAND E TRUE LIST" << "\t" ;
+	    for(unsigned i=0 ; i<$$->getTrueList().size() ; i++ )
+            cout <<  $$->getTrueList().at(i) << " ";
+        cout << "\nAND E FALSE LIST" << "\t" ;
+	    for(unsigned i=0 ; i<$$->getFalseList().size() ; i++ )
+            cout <<  $$->getFalseList().at(i) << " ";*/
     }
     | exp OR M exp {
+        /*cout << "\n\nM value: " << $3 ; 
+        cout << "\nOR E1 TRUE LIST:" << "\t" ;
+	    for(unsigned i=0 ; i<$1->getTrueList().size() ; i++ )
+            cout <<  $1->getTrueList().at(i);
+        cout << "\nOR E2 TRUE LIST:" << "\t" ;
+	    for(unsigned i=0 ; i<$4->getTrueList().size() ; i++ )
+            cout <<  $4->getTrueList().at(i);
+	    
+        cout << "\nOR E1 FALSE LIST:" << "\t" ;
+	    for(unsigned i=0 ; i<$1->getFalseList().size() ; i++ )
+            cout <<  $1->getFalseList().at(i);
+        cout << "\nOR E2 FALSE LIST:" << "\t" ;
+	    for(unsigned i=0 ; i<$4->getFalseList().size() ; i++ )
+            cout <<  $4->getFalseList().at(i);*/
+
         $$ = new expr(boolexp_e);
         $$->insertSymbol(newtemp());
-        emit(orb, $1, $4, $$, 0, yylineno);
-       
-        backpatch($1->getFalseList(),$3);
+        for(int i=0 ;i<$1->getFalseList().size() ; i++)
+            backpatch($3,$1->getFalseList().at(i));
+        
         $$->setTrueList(merge($1->getTrueList(),$4->getTrueList()));
         $$->setFalseList($4->getFalseList());
-
+        
+        /*cout << "\nOR E TRUE LIST:" << "\t" ;
+	    for(unsigned i=0 ; i<$$->getTrueList().size() ; i++ )
+            cout <<  $$->getTrueList().at(i) << " ";
+        cout << "\nOR E FALSE LIST:" << "\t" ;
+	    for(unsigned i=0 ; i<$$->getFalseList().size() ; i++ )
+            cout <<  $$->getFalseList().at(i) << " \n";*/
     }
     | exp EQUAL exp{
         $$ = new expr(boolexp_e);
         $$->insertSymbol(newtemp());
-        emit(if_eq, $1, $3, $$, nextQuad()+4, yylineno);
-
-        expr *temp=new expr(constbool_e);
-        temp->setboolConst(false);
-        emit(assign,temp,NULL,$$,0,yylineno); 
-
-        emit(jump,NULL,NULL,NULL,nextQuad()+3,yylineno);
-
-        temp=new expr(constbool_e);
-        temp->setboolConst(true);
-        emit(assign,temp,NULL,$$,0,yylineno); 
+       
+        $$->insertTrueLabel(nextQuad());
+        emit(if_eq,$1,$3,NULL ,0, yylineno);
+        
+        $$->insertFalseLabel(nextQuad());
+        emit(jump,NULL,NULL,NULL,0,yylineno);
     }
     | exp NOT_EQUAL exp{
         $$ = new expr(boolexp_e);
         $$->insertSymbol(newtemp());
-        emit(if_noteq, $1, $3, $$, nextQuad()+4, yylineno);
-
-        expr *temp=new expr(constbool_e);
-        temp->setboolConst(false);
-        emit(assign,temp,NULL,$$,0,yylineno); 
-
-        emit(jump,NULL,NULL,NULL,nextQuad()+3,yylineno);
-
-        temp=new expr(constbool_e);
-        temp->setboolConst(true);
-        emit(assign,temp,NULL,$$,0,yylineno); 
+       
+        $$->insertTrueLabel(nextQuad());
+        emit(if_noteq,$1,$3,NULL ,0, yylineno);
+        
+        $$->insertFalseLabel(nextQuad());
+        emit(jump,NULL,NULL,NULL,0,yylineno);
     } 
     | term {$$=$1;};
 
@@ -389,6 +421,26 @@ assign_exp: lvalue ASSIGN exp {
         }  
         if(isMember) isMember=false;
         
+        if($3->getType()==boolexp_e){
+            expr *temp=new expr(constbool_e);
+            temp->setboolConst(false);
+        
+            /*Backpatching falselist*/
+            for(int i=0 ;i<$3->getFalseList().size() ; i++)
+                backpatch(nextQuad(),$3->getFalseList().at(i));
+        
+            emit(assign,temp,NULL,$3,0,yylineno);
+            emit(jump,NULL,NULL,NULL,nextQuad()+3,yylineno);
+        
+            /*Backpatching truelist*/
+            for(int i=0 ;i<$3->getTrueList().size() ; i++)
+                backpatch(nextQuad(),$3->getTrueList().at(i));
+
+            temp=new expr(constbool_e);
+            temp->setboolConst(true);
+            emit(assign,temp,NULL,$3,0,yylineno); 
+        }
+
         if($1->getType()==tableitem_e)
             emit(tablesetelem,$1,$1->getIndex(),$3,0,yylineno);
         else{
@@ -630,19 +682,45 @@ idlist: ID {
     | ;
 
 if_stmt: if_prefix stmt {
-        patchlabel($1, nextQuad()+1);
+        cout << "IFPREFIX ONLY: " << $1 << endl;
+        patchlabel($1-1, nextQuad()+1);
+        patchlabel($1+1, nextQuad()+1);
     }
     | if_prefix stmt else_prefix stmt {
-        patchlabel($1,$3+2); 
-        patchlabel($3, nextQuad()+1);        
+        patchlabel($1-2,$3-1); //if eq if_prefix
+        patchlabel($1-1,$3+2); //jmp if_prefix
+        patchlabel($3, nextQuad()+1); // jmp to end     
 } ;
 
 if_prefix: IF L_PARENTHESIS exp R_PARENTHESIS{
     expr *temp = new expr(constbool_e);
     temp->setboolConst(true);
-    emit(if_eq, $3, temp,NULL, nextQuad()+3 , yylineno); 
+    if($3->getType()==boolexp_e){
+        //////////////////////////////
+        expr *temp=new expr(constbool_e);
+        temp->setboolConst(false);
+        
+        /*Backpatching falselist*/
+        for(int i=0 ;i<$3->getFalseList().size() ; i++)
+            backpatch(nextQuad(),$3->getFalseList().at(i));
+        
+        emit(assign,temp,NULL,$3,0,yylineno);
+        emit(jump,NULL,NULL,NULL,nextQuad()+3,yylineno);
+        
+        /*Backpatching truelist*/
+        for(int i=0 ;i<$3->getTrueList().size() ; i++)
+            backpatch(nextQuad(),$3->getTrueList().at(i));
+
+        temp=new expr(constbool_e);
+        temp->setboolConst(true);
+        emit(assign,temp,NULL,$3,0,yylineno); 
+        //////////////////////////////
+        emit(if_eq, $3, temp, NULL, 0, yylineno);
+        emit(jump,NULL,NULL,NULL,0,yylineno);
+    }
+
     $$ = nextQuad();
-    emit(jump,NULL,NULL,NULL,0,yylineno);
+
 } ;
 
 
@@ -723,7 +801,7 @@ int main(int argc, char **argv) {
     yyparse();
     cout << "-----------------------------------------------------------------------" << endl;
 
-  table.printSymbols();
+  //table.printSymbols();
   print_quads();
 
 

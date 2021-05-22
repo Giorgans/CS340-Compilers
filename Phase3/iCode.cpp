@@ -13,6 +13,7 @@ extern int yylineno,scope;
 unsigned int currQuad = 0;
 unsigned int tempVar = 0;
 vector <quad> quads;
+stack <quad> quadStack;
 contbreaklists *BClist = new contbreaklists();
 stack <unsigned> LoopCounterStack;
 stack <unsigned> functionLocalStack;
@@ -22,6 +23,11 @@ void emit(iopcode op,expr *arg1,expr *arg2,expr *result,unsigned label,unsigned 
     currQuad++;
     quads.push_back(quad(op,result,arg1,arg2,label,line));
 }
+
+void emit_stack(quad tquad){
+    quadStack.push(tquad);
+}
+
 
 unsigned int nextQuad(){return currQuad;}
 
@@ -184,13 +190,8 @@ void checkuminus(expr *e){
 /*************************************************************************************/
 
 /****************************** Label related functions ******************************/
-void backpatch(vector <unsigned> list, unsigned label){
-	
-	for(unsigned i=0 ; i<list.size() ; i++ ){
-		assert( list.at(i) < currQuad );
-        quads.at(list.at(i)).setLabel(label);
-
-	}
+void backpatch(unsigned savedlabel, unsigned quadlabel){
+    if(!quads.at(quadlabel).getLabel())quads.at(quadlabel).setLabel(savedlabel+1);
 }
 
 void patchlabel(unsigned quad, unsigned label){

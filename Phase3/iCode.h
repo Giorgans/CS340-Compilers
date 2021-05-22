@@ -69,11 +69,13 @@ typedef class expr{
         void setIndex(expr *index){this->index=index;}
         vector <unsigned> getTrueList(){return truelist;}
         void setTrueList(vector <unsigned> truelist){this->truelist=truelist;}
+        void insertTrueLabel(unsigned label){this->truelist.push_back(label);}
         vector <unsigned> getFalseList(){return falselist;}
         void setFalseList(vector <unsigned> falselist){this->falselist=falselist;}
-    
+        void insertFalseLabel(unsigned label){this->falselist.push_back(label);}
         expr(exp_t type){
             this->type=type;
+
         }
 }expr;
 
@@ -163,6 +165,7 @@ typedef class contbreaklists {
 
 /* Quad related functions and variables*/
 void emit(iopcode op,expr *arg1,expr *arg2,expr *result,unsigned label,unsigned line);
+void emit_stack(quad tquad);
 unsigned int nextQuad();
 string iopcode_to_string(iopcode op);
 void print_quads();
@@ -177,12 +180,12 @@ void checkuminus(expr *e);
 /************************************************/
 
 /* Label related functions */
-void backpatch(vector <unsigned> list, unsigned label);
+void backpatch(unsigned savedlabel, unsigned quadlabel);
+void backpatchLabels(vector <unsigned> list, unsigned label);
 void patchlabel(unsigned quad, unsigned label);
 void patchlabelBC(vector <unsigned> list, unsigned label);
 vector <unsigned> merge(vector <unsigned> a,vector <unsigned> b);
 /************************************************/
-
 /* Scope space related functions */
 scopespace_t currscopespace(void);
 void enterscopespace(void);
