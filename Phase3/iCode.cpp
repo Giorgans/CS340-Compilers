@@ -23,7 +23,7 @@ void emit(iopcode op,expr *arg1,expr *arg2,expr *result,unsigned label,unsigned 
     quads.push_back(quad(op,result,arg1,arg2,label,line));
 }
 void tempemit(){
-    if(tempQuad) tempQuad = currQuad +1;
+    if(!tempQuad) tempQuad = currQuad+1;
     else tempQuad++;
 }
 
@@ -142,11 +142,6 @@ expr *lvalue_exp(Symbol *sym){
         default: assert(0);
     }
     e->insertSymbol(sym);
-    
-    e->insertTrueLabel(getTempQuad());
-    tempemit();
-    e->insertFalseLabel(getTempQuad()+1);
-    tempemit();
     return e;
 }
 
@@ -166,7 +161,6 @@ expr *make_call(expr *lvalue,elists *elist){
     for (list <expr>::iterator i = elist->getElist()->begin() ; i!=elist->getElist()->end() ; i++){
         emit(param,NULL,NULL,&*i,0,yylineno);
     }
-cout << "MOIRAZA paketa" << endl;
     emit(call,NULL,NULL,func,0,yylineno);
     expr *result = new expr(var_e);
     result->insertSymbol(newtemp());
@@ -266,6 +260,11 @@ void resetfunctionlocaloffset(void){functionLocalOffset = 0;}
 unsigned getprogramVarOffset(){return programVarOffset; }
 unsigned getfunctionLocalOffset(){return functionLocalOffset;}
 unsigned getformalArgOffset(){return formalArgOffset;}
+
+void setprogramVarOffset(unsigned offset){programVarOffset=offset;}
+void setfunctionLocalOffset(unsigned offset){functionLocalOffset=offset;}
+void setformalArgOffset(unsigned offset){formalArgOffset=offset;}
+
 /*************************************************************************************/
 
 /********************* Temp hidden variable related functions ***********************/

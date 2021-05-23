@@ -55,6 +55,8 @@ typedef class expr{
         string strConst;
         bool boolConst;
         vector <unsigned> truelist,falselist;
+        bool notGate;
+        
     public:
         exp_t getType(){return this->type;}
         Symbol *getSymbol(){return this->sym;}
@@ -73,6 +75,8 @@ typedef class expr{
         vector <unsigned> getFalseList(){return falselist;}
         void setFalseList(vector <unsigned> falselist){this->falselist=falselist;}
         void insertFalseLabel(unsigned label){this->falselist.push_back(label);}
+        bool getNotGate(){return this->notGate;}
+        void setNotGate(bool notGate){this->notGate=notGate;}
         expr(exp_t type){
             this->type=type;
 
@@ -164,6 +168,31 @@ typedef class contbreaklists {
     contbreaklists(){};
 }contbreaklists;
 
+typedef class indexedelements{
+    private:
+        expr *index;
+        expr *value;
+    public:
+        expr *getIndexElement(){return this->index;}
+        expr *getValueElement(){return this->value;}
+    indexedelements(expr *index,expr *value){
+        this->index=index;
+        this->value=value;
+    }
+}indexedelements;
+
+typedef class indexedlist{
+    private:
+        list <indexedelements> *indexlist;
+    public:
+        list <indexedelements> *getIndexedList(){return this->indexlist;}
+        void insertElements(indexedelements *elements){this->indexlist->push_back(*elements);}
+    indexedlist(){
+        this->indexlist = new list<indexedelements>();
+    }
+}indexedlist;
+
+
 
 /* Quad related functions and variables*/
 void emit(iopcode op,expr *arg1,expr *arg2,expr *result,unsigned label,unsigned line);
@@ -205,6 +234,9 @@ void resetfunctionlocaloffset(void);
 unsigned getprogramVarOffset();
 unsigned getfunctionLocalOffset();
 unsigned getformalArgOffset();
+void setprogramVarOffset(unsigned offset);
+void setfunctionLocalOffset(unsigned offset);
+void setformalArgOffset(unsigned offset);
 /************************************************/
 
 /*Temp hidden variable related functions*/

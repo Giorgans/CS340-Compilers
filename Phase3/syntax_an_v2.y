@@ -51,6 +51,8 @@ bool partial=false;
     class contbreaklists *BCLists;
     class calls *Call;
     class elists *elistV;
+    class indexedelements *elem;
+    class indexedlist *indlist;
 }
 
 /*Integer const token*/
@@ -74,6 +76,9 @@ bool partial=false;
 %type <BCLists> stmts stmt if_stmt while_stmt for_stmt ret_stmt block loopstmt
 /*Tokens for calls*/
 %type <Call> normcall methodcall callsuffix 
+/*Tokens for indexed elements*/
+%type <elem>  index_el
+%type <indlist>  indexed
 /*Tokens for keywords*/
 %token IF ELSE WHILE FOR FUNCTION RETURN BREAK CONTINUE AND NOT OR LOCAL TRUE FALSE NIL
 /*Tokens for operators*/
@@ -233,16 +238,33 @@ exp: assign_exp {$$=$1;}
             emit(if_eq,$1,temp,NULL ,0, yylineno);
         
             emit(jump,NULL,NULL,NULL,0,yylineno);
+
+            if($1->getNotGate()){
+                $1->insertTrueLabel(nextQuad()-1);
+                $1->insertFalseLabel(nextQuad()-2);
+            }
+            else{
+                $1->insertTrueLabel(nextQuad()-2);
+                $1->insertFalseLabel(nextQuad()-1);
+            }
             $3 = nextQuad();
         }
+        
         if($4->getType()!=boolexp_e){
             expr *temp = new expr(constbool_e);
             temp->setboolConst(true);
-            $4->insertTrueLabel(nextQuad());
             emit(if_eq,$4,temp,NULL ,0, yylineno);
-        
-            $4->insertFalseLabel(nextQuad());
+            
             emit(jump,NULL,NULL,NULL,0,yylineno);
+            
+            if($4->getNotGate()){
+                $4->insertTrueLabel(nextQuad()-1);
+                $4->insertFalseLabel(nextQuad()-2);
+            }
+            else{
+                $4->insertTrueLabel(nextQuad()-2);
+                $4->insertFalseLabel(nextQuad()-1);
+            }        
         }
 
 
@@ -279,6 +301,42 @@ exp: assign_exp {$$=$1;}
             cout <<  $$->getFalseList().at(i) << " ";
     }
     | exp OR M exp {
+
+        
+        if($1->getType()!=boolexp_e){
+            expr *temp = new expr(constbool_e);
+            temp->setboolConst(true);
+            emit(if_eq,$1,temp,NULL ,0, yylineno);
+        
+            emit(jump,NULL,NULL,NULL,0,yylineno);
+
+            if($1->getNotGate()){
+                $1->insertTrueLabel(nextQuad()-1);
+                $1->insertFalseLabel(nextQuad()-2);
+            }
+            else{
+                $1->insertTrueLabel(nextQuad()-2);
+                $1->insertFalseLabel(nextQuad()-1);
+            }
+            $3 = nextQuad();
+        }
+        
+        if($4->getType()!=boolexp_e){
+            expr *temp = new expr(constbool_e);
+            temp->setboolConst(true);
+            emit(if_eq,$4,temp,NULL ,0, yylineno);
+            
+            emit(jump,NULL,NULL,NULL,0,yylineno);
+            
+            if($4->getNotGate()){
+                $4->insertTrueLabel(nextQuad()-1);
+                $4->insertFalseLabel(nextQuad()-2);
+            }
+            else{
+                $4->insertTrueLabel(nextQuad()-2);
+                $4->insertFalseLabel(nextQuad()-1);
+            }        
+        }
         /*cout << "\n\nM value: " << $3 ; 
         cout << "\nOR E1 TRUE LIST:" << "\t" ;
 	    for(unsigned i=0 ; i<$1->getTrueList().size() ; i++ )
@@ -343,6 +401,7 @@ term: L_PARENTHESIS exp R_PARENTHESIS {$$=$2;}
         vector <unsigned> templist = $2->getTrueList();
         $$->setTrueList($2->getFalseList());
         $$->setFalseList(templist);
+        $$->setNotGate(true);
 
         cout << "\nnot E TRUE LIST" << "\t" ;
 	    for(unsigned i=0 ; i<$$->getTrueList().size() ; i++ )
@@ -540,9 +599,7 @@ lvalue: ID {
             Symbol *symbol=table.LookupScope($2,0);
             if(symbol==NULL)
                 cout << "[Syntax Analysis] ERROR: There is no declaration of global var \"" << $2 <<"\", in line " << yylineno << endl;  
-            $$ = lvalue_exp(symbol);
-
-            
+            $$ = lvalue_exp(symbol); 
     }
 
                     
@@ -587,7 +644,16 @@ elist: exp {$$=new elists($1);}
     | elist COMMA exp {$$=$1; $$->insertElistItem($3);}
     | {$$=new elists();}; 
 
-obj_def:  L_BRACKET indexed R_BRACKET 
+obj_def:  L_BRACKET indexed R_BRACKET {
+        expr *temp = new expr(newtable_e),*tempi;
+        temp->insertSymbol(newtemp());
+        emit(tablecreate,NULL,NULL,temp,0,yylineno);
+        for(list <indexedelements>::iterator i = $2->getIndexedList()->begin() ;  i!=$2->getIndexedList()->end() ; i++)
+            emit(tablesetelem,i->getIndexElement(),i->getValueElement(),temp,0,yylineno);
+        
+        $$ = temp;
+
+}
     | L_BRACKET elist R_BRACKET {
         expr *temp = new expr(newtable_e),*tempi;
         temp->insertSymbol(newtemp());
@@ -595,17 +661,17 @@ obj_def:  L_BRACKET indexed R_BRACKET
         int count = 0;
         for(list <expr>::iterator i = $2->getElist()->begin() ; i!=$2->getElist()->end() ; i++){
             tempi = new expr(costnum_e);
-            count++;
             tempi->setnumconst(count);
-            emit(tablesetelem,tempi,temp,&*i,0,yylineno);
+            emit(tablesetelem,tempi,&*i,temp,0,yylineno);
+            count++;
         }
         $$ = temp;
     }  ;
 
-indexed: index_el 
-    | indexed COMMA index_el ;
+indexed: index_el {$$ = new indexedlist(); $$->insertElements($1);}
+    | indexed COMMA index_el { $$ = $1; $$->insertElements($3); } ;
 
-index_el: L_BRACE exp COLON exp R_BRACE ;
+index_el: L_BRACE exp COLON exp R_BRACE {$$=new indexedelements($2,$4);};
 
 block: L_BRACE {scope++;} stmts   R_BRACE {table.Hide(scope); scope--; $$ = $3;};
 
@@ -657,7 +723,16 @@ funcargs:  L_PARENTHESIS {scope++;} idlist R_PARENTHESIS {
 
 funcbody: { scope--; func_open++;}funcblockstart block funcblockend {func_open--; exitscopespace(); } ;
 
-f_def: funcprefix funcargs funcbody{ exitscopespace(); }
+f_def: funcprefix funcargs funcbody{ 
+    exitscopespace(); 
+    $$->setTotalLocals(getfunctionLocalOffset());
+    setfunctionLocalOffset(functionLocalStack.top());
+    functionLocalStack.pop();
+
+    $$=$1;
+    emit(funcend,NULL,NULL,lvalue_exp($1),0,yylineno);
+
+}
         
 const:  INTCONST { 
                     $$ = new expr(costnum_e);
@@ -678,14 +753,10 @@ const:  INTCONST {
         | TRUE {
                     $$ = new expr(constbool_e);
                     $$->setboolConst(true);
-                    $$->insertTrueLabel(getTempQuad());
-                    tempemit();
-                    tempemit();
                 } 
         | FALSE {
                     $$ = new expr(constbool_e);
                     $$->setboolConst(false);
-                    $$->insertFalseLabel(nextQuad());
                 } ;
 
 idlist: ID {
@@ -774,8 +845,8 @@ loopstmt : loopstart stmt loopend { $$ = $2; } ;
 while_stmt: whilestart whilecond loopstmt{
     emit(jump,NULL,NULL,NULL,$1,yylineno); 
     patchlabel($2, nextQuad()); 
-    patchlabelBC($$->getBreakList(), nextQuad()); 
-    patchlabelBC($$->getContList(), $1);
+    //patchlabelBC($$->getBreakList(), nextQuad()); 
+    //patchlabelBC($$->getContList(), $1);
 } ;
 
 
@@ -784,6 +855,27 @@ whilestart: WHILE {$$=nextQuad();};
 whilecond: L_PARENTHESIS exp R_PARENTHESIS  {
     expr *temp = new expr(constbool_e);
     temp->setboolConst(true);
+    
+    if($2->getType()==boolexp_e){
+        expr *temp=new expr(constbool_e);
+        temp->setboolConst(false);
+        
+        /*Backpatching falselist*/
+        for(int i=0 ;i<$2->getFalseList().size() ; i++)
+            backpatch(nextQuad(),$2->getFalseList().at(i));
+        
+        emit(assign,temp,NULL,$2,0,yylineno);
+        emit(jump,NULL,NULL,NULL,nextQuad()+3,yylineno);
+        
+        /*Backpatching truelist*/
+        for(int i=0 ;i<$2->getTrueList().size() ; i++)
+            backpatch(nextQuad(),$2->getTrueList().at(i));
+
+        temp=new expr(constbool_e);
+        temp->setboolConst(true);
+        emit(assign,temp,NULL,$2,0,yylineno); 
+    }
+    
     emit(if_eq, $2, temp, NULL, nextQuad()+2,yylineno); 
     $$ = nextQuad();
     emit(jump,NULL,NULL,NULL,0,yylineno);
