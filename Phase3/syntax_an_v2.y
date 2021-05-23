@@ -790,8 +790,8 @@ idlist: ID {
 
 if_stmt: if_prefix stmt {
         cout << "IFPREFIX ONLY: " << $1 << endl;
+        patchlabel($1-2, $1+1);
         patchlabel($1-1, nextQuad()+1);
-        patchlabel($1+1, nextQuad()+1);
     }
     | if_prefix stmt else_prefix stmt {
         patchlabel($1-2,$3-1); //if eq if_prefix
@@ -845,8 +845,8 @@ loopstmt : loopstart stmt loopend { $$ = $2; } ;
 while_stmt: whilestart whilecond loopstmt{
     emit(jump,NULL,NULL,NULL,$1,yylineno); 
     patchlabel($2, nextQuad()); 
-    //patchlabelBC($$->getBreakList(), nextQuad()); 
-    //patchlabelBC($$->getContList(), $1);
+    patchlabelBC($$->getBreakList(), nextQuad()); 
+    patchlabelBC($$->getContList(), $1);
 } ;
 
 
@@ -882,20 +882,44 @@ whilecond: L_PARENTHESIS exp R_PARENTHESIS  {
 };
 
 for_prefix: FOR L_PARENTHESIS elist SEMICOLON M exp SEMICOLON{
-    $$ = new forprefix($5,nextQuad());
     expr *temp = new expr(constbool_e);
     temp->setboolConst(true);
+
+    if($6->getType()==boolexp_e){
+        expr *temp=new expr(constbool_e);
+        temp->setboolConst(false);
+        
+        /*Backpatching falselist*/
+        for(int i=0 ;i<$6->getFalseList().size() ; i++)
+            backpatch(nextQuad(),$6->getFalseList().at(i));
+        
+        emit(assign,temp,NULL,$6,0,yylineno);
+        emit(jump,NULL,NULL,NULL,nextQuad()+3,yylineno);
+        
+        /*Backpatching truelist*/
+        for(int i=0 ;i<$6->getTrueList().size() ; i++)
+            backpatch(nextQuad(),$6->getTrueList().at(i));
+
+        temp=new expr(constbool_e);
+        temp->setboolConst(true);
+        emit(assign,temp,NULL,$6,0,yylineno); 
+    }
+
+    $$ = new forprefix($5,nextQuad());
     emit(if_eq,$6,temp,NULL,0,yylineno);
-} ; 
+
+
+} ;
 
 for_stmt: for_prefix N elist R_PARENTHESIS N loopstmt N{
-    patchlabel($1->getEnter(),$5+1); // true jump
-    patchlabel($2,nextQuad()); // false jump
-    patchlabel($5,$1->getTest()); // loop jump
-    patchlabel($7,$2+1); // closure jump
+    cout<< $1->getEnter() <<endl;
+    patchlabel($1->getEnter(),$5+2); // true jump
+    patchlabel($2,nextQuad()+1); // false jump
+    patchlabel($5,$1->getTest()+1); // loop jump
+    patchlabel($7,$2+3); // closure jump
     
-    patchlabelBC($$->getBreakList(),nextQuad());  //false jump
-    patchlabelBC($$->getContList(),$2+1);  //closure jump
+    //patchlabelBC($$->getBreakList(),nextQuad());  //false jump
+    //patchlabelBC($$->getContList(),$2+1);  //closure jump
 } ;
 
 ret_stmt: RETURN SEMICOLON {

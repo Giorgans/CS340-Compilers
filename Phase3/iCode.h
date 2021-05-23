@@ -215,7 +215,6 @@ void checkuminus(expr *e);
 
 /* Label related functions */
 void backpatch(unsigned savedlabel, unsigned quadlabel);
-void backpatchLabels(vector <unsigned> list, unsigned label);
 void patchlabel(unsigned quad, unsigned label);
 void patchlabelBC(vector <unsigned> list, unsigned label);
 vector <unsigned> merge(vector <unsigned> a,vector <unsigned> b);
