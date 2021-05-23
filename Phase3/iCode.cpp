@@ -13,6 +13,8 @@ extern int yylineno,scope;
 unsigned int currQuad = 0;
 unsigned int tempQuad = 0;
 vector <quad> quads;
+queue <quad> exprquads;
+queue <unsigned> Mquads;
 contbreaklists *BClist = new contbreaklists();
 stack <unsigned> LoopCounterStack;
 stack <unsigned> functionLocalStack;
@@ -22,17 +24,46 @@ void emit(iopcode op,expr *arg1,expr *arg2,expr *result,unsigned label,unsigned 
     currQuad++;
     quads.push_back(quad(op,result,arg1,arg2,label,line));
 }
-void tempemit(){
-    if(!tempQuad) tempQuad = currQuad+1;
-    else tempQuad++;
+void tempemit(iopcode op,expr *arg1,expr *arg2,expr *result,unsigned label,unsigned line){
+    tempQuad++;
+    exprquads.push(quad(op,result,arg1,arg2,label,line));
 }
 
+quad nextTempemit(){
+    quad temp=exprquads.front();
+    exprquads.pop();
+    return temp;
+}
+
+unsigned nextMquad(){
+    unsigned temp=Mquads.front();
+    Mquads.pop();
+    return temp+2;
+
+}
 
 unsigned int getTempQuad(){return tempQuad;}
 
 void resetTempQuad(){tempQuad = 0;}
 
 unsigned int nextQuad(){return currQuad;}
+
+expr *addemits(){
+    quad tempifquad = nextTempemit();
+    expr *arg1 = tempifquad.getArg1();
+            
+    for(int i = 0 ; i!=arg1->getTrueList().size() ; i++)
+        arg1->getTrueList().at(i)+=nextQuad();
+            
+    emit(tempifquad.getOp(),tempifquad.getArg1(),tempifquad.getArg2(),NULL,0,yylineno);
+
+    for(int i = 0 ; i!=arg1->getFalseList().size() ; i++)
+        arg1->getFalseList().at(i)+=nextQuad();
+            
+    quad tempjumpquad = nextTempemit();
+    emit(tempjumpquad.getOp(),tempjumpquad.getArg1(),tempjumpquad.getArg2(),NULL,0,yylineno);
+    return arg1;  
+}
 
 void print_quads(){
 
@@ -204,8 +235,8 @@ void patchlabel(unsigned quad, unsigned label){
 }
 
 void patchlabelBC(vector <unsigned> list, unsigned label){
-    for(vector <unsigned>::iterator i=list.begin() ; i!=list.end() ; i++)
-        quads.at(*i).setLabel(label);
+    for(int i=0 ; i<list.size() ; i++)
+        quads.at(list.at(i)).setLabel(label);
 }
 
 vector <unsigned> merge(vector <unsigned> a,vector <unsigned> b){

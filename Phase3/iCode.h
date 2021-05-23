@@ -8,6 +8,7 @@
 #include <vector>
 #include <list>
 #include <stack>
+#include <queue>
 #include <algorithm>
 #include <iterator>
 
@@ -56,7 +57,7 @@ typedef class expr{
         bool boolConst;
         vector <unsigned> truelist,falselist;
         bool notGate;
-        
+        bool andGate;
     public:
         exp_t getType(){return this->type;}
         Symbol *getSymbol(){return this->sym;}
@@ -77,8 +78,13 @@ typedef class expr{
         void insertFalseLabel(unsigned label){this->falselist.push_back(label);}
         bool getNotGate(){return this->notGate;}
         void setNotGate(bool notGate){this->notGate=notGate;}
+        bool getAndGate(){return this->andGate;}
+        void setAndGate(bool andGate){this->andGate=andGate;}
         expr(exp_t type){
             this->type=type;
+            this->notGate=false;
+            this->andGate=false;
+
 
         }
 }expr;
@@ -197,7 +203,10 @@ typedef class indexedlist{
 /* Quad related functions and variables*/
 void emit(iopcode op,expr *arg1,expr *arg2,expr *result,unsigned label,unsigned line);
 void emit_stack(quad tquad);
-void tempemit();
+void tempemit(iopcode op,expr *arg1,expr *arg2,expr *result,unsigned label,unsigned line);
+expr *addemits();
+quad nextTempemit();
+unsigned nextMquad();
 unsigned int getTempQuad();
 void resetTempQuad();
 unsigned int nextQuad();

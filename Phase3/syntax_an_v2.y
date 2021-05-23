@@ -27,10 +27,11 @@ SymbolTable table;
 extern contbreaklists *BClist;
 extern stack <unsigned> LoopCounterStack;
 extern stack <unsigned> functionLocalStack;
+extern queue <quad> exprquads;
+extern queue <unsigned> Mquads;
 unsigned int scope=0,loop_open=0,func_open=0,func_id_num=0;
 unsigned loopcounter = 0;
 bool isMember=false;
-bool partial=false;
 
 %}
 
@@ -73,7 +74,7 @@ bool partial=false;
 /*Token for for prefix*/
 %type <fprefix> for_prefix
 /*Tokens for break and continue lists*/
-%type <BCLists> stmts stmt if_stmt while_stmt for_stmt ret_stmt block loopstmt
+%type <BCLists> stmts stmt if_stmt while_stmt for_stmt ret_stmt block loopstmt 
 /*Tokens for calls*/
 %type <Call> normcall methodcall callsuffix 
 /*Tokens for indexed elements*/
@@ -104,13 +105,9 @@ bool partial=false;
 program: stmts ;
 
 stmts: stmts stmt{
-    if($$==NULL){
-        $$ = new contbreaklists();
-        $1 = new contbreaklists();
-    }
     //$$->setBreakList(merge($1->getBreakList(),$2->getBreakList()));
     //$$->setContList(merge($1->getContList(),$2->getContList()));
-} |  ;
+} |;
 
 stmt:  exp SEMICOLON  {
             resettemp();
@@ -133,30 +130,27 @@ stmt:  exp SEMICOLON  {
             emit(assign,temp,NULL,$1,0,yylineno); 
         }
     }
-      |  if_stmt {
-            $$ = new contbreaklists();
-            //$$->setBreakList(merge($$->getBreakList(),$1->getBreakList()));
-            //$$->setContList(merge($$->getContList(),$1->getContList()));
-
-      }
-      | {loop_open++;} while_stmt {loop_open--;} 
-      | {loop_open++;} for_stmt {loop_open--;} 
-      | ret_stmt 
+      |  if_stmt {resettemp(); }
+      | {loop_open++;} while_stmt {loop_open--;resettemp(); } 
+      | {loop_open++;} for_stmt {loop_open--;resettemp(); } 
+      | ret_stmt {resettemp(); }
       | BREAK SEMICOLON {
           if(!loop_open) cout << "[Syntax Analysis] ERROR: Cannot use BREAK statement while not within loop, in line " << yylineno << endl;
-          $$ = BClist;
+          $$ = new contbreaklists();
           $$->insertBreakList(nextQuad());
           emit(jump,NULL,NULL,NULL,0,yylineno);
+          resettemp(); 
       }
       | CONTINUE SEMICOLON {
           if(!loop_open) cout << "[Syntax Analysis] ERROR: Cannot use CONTINUE statement while not within loop, in line " << yylineno << endl;
-          $$ = BClist;
+          $$ = new contbreaklists();
           $$->insertContList(nextQuad());
           emit(jump,NULL,NULL,NULL,0,yylineno);
+          resettemp(); 
       }
-      | block {  $$ = $1;}
-      | f_def 
-      | SEMICOLON ;
+      | block {resettemp();$$=$1; }
+      | f_def {resettemp(); }
+      | SEMICOLON {resettemp(); } ;
 
 
 exp: assign_exp {$$=$1;}
@@ -230,80 +224,63 @@ exp: assign_exp {$$=$1;}
 
     }
     | exp AND M exp {
- 
+        $$ = new expr(boolexp_e);
+        $$->insertSymbol(newtemp());
         
         if($1->getType()!=boolexp_e){
             expr *temp = new expr(constbool_e);
             temp->setboolConst(true);
-            emit(if_eq,$1,temp,NULL ,0, yylineno);
+            tempemit(if_eq,$1,temp,NULL ,0, yylineno);
         
-            emit(jump,NULL,NULL,NULL,0,yylineno);
+            tempemit(jump,NULL,NULL,NULL,0,yylineno);
 
             if($1->getNotGate()){
-                $1->insertTrueLabel(nextQuad()-1);
-                $1->insertFalseLabel(nextQuad()-2);
+                $1->insertTrueLabel(getTempQuad()+1);
+                $1->insertFalseLabel(getTempQuad());
             }
             else{
-                $1->insertTrueLabel(nextQuad()-2);
-                $1->insertFalseLabel(nextQuad()-1);
+                $1->insertTrueLabel(getTempQuad());
+                $1->insertFalseLabel(getTempQuad()+1);
             }
-            $3 = nextQuad();
+                        
+            $3 = getTempQuad();
+            Mquads.push($3);
+            $$->setAndGate(true);
         }
-        
+ 
         if($4->getType()!=boolexp_e){
             expr *temp = new expr(constbool_e);
             temp->setboolConst(true);
-            emit(if_eq,$4,temp,NULL ,0, yylineno);
+            tempemit(if_eq,$4,temp,NULL ,0, yylineno);
             
-            emit(jump,NULL,NULL,NULL,0,yylineno);
+            tempemit(jump,NULL,NULL,NULL,0,yylineno);
             
             if($4->getNotGate()){
-                $4->insertTrueLabel(nextQuad()-1);
-                $4->insertFalseLabel(nextQuad()-2);
+                $4->insertTrueLabel(getTempQuad()+1);
+                $4->insertFalseLabel(getTempQuad());
             }
             else{
-                $4->insertTrueLabel(nextQuad()-2);
-                $4->insertFalseLabel(nextQuad()-1);
-            }        
+                $4->insertTrueLabel(getTempQuad());
+                $4->insertFalseLabel(getTempQuad()+1);
+            }    
+            $$->setAndGate(true);
+        }
+
+        if($1->getType()==boolexp_e && $4->getType()==boolexp_e){
+            for(int i=0 ;i<$1->getTrueList().size() ; i++)
+                backpatch($3,$1->getTrueList().at(i));
+
+            $$->setTrueList($4->getTrueList());
+            $$->setFalseList(merge($1->getFalseList(),$4->getFalseList() ));
         }
 
 
-
-       cout << "\nM value: " << $3 ; 
-        cout << "\nAND E1 TRUE LIST:" << "\t" ;
-	    for(unsigned i=0 ; i<$1->getTrueList().size() ; i++ )
-            cout <<  $1->getTrueList().at(i);
-        cout << "\nAND E2 TRUE LIST:" << "\t" ;
-	    for(unsigned i=0 ; i<$4->getTrueList().size() ; i++ )
-            cout <<  $4->getTrueList().at(i);
-	    
-        cout << "\nAND E1 FALSE LIST:" << "\t" ;
-	    for(unsigned i=0 ; i<$1->getFalseList().size() ; i++ )
-            cout <<  $1->getFalseList().at(i);
-        cout << "\nAND E2 FALSE LIST:" << "\t" ;
-	    for(unsigned i=0 ; i<$4->getFalseList().size() ; i++ )
-            cout <<  $4->getFalseList().at(i);
-        cout << "\n";        
-
-        for(int i=0 ;i<$1->getTrueList().size() ; i++)
-            backpatch($3,$1->getTrueList().at(i));
-        
-        $$ = new expr(boolexp_e);
-        $$->insertSymbol(newtemp());
-        $$->setTrueList($4->getTrueList());
-        $$->setFalseList(merge($1->getFalseList(),$4->getFalseList() ));
-        
-        cout << "\nAND E TRUE LIST" << "\t" ;
-	    for(unsigned i=0 ; i<$$->getTrueList().size() ; i++ )
-            cout <<  $$->getTrueList().at(i) << " ";
-        cout << "\nAND E FALSE LIST" << "\t" ;
-	    for(unsigned i=0 ; i<$$->getFalseList().size() ; i++ )
-            cout <<  $$->getFalseList().at(i) << " ";
     }
     | exp OR M exp {
+        $$ = new expr(boolexp_e);
+        $$->insertSymbol(newtemp());
 
-        
-        if($1->getType()!=boolexp_e){
+        if($1->getType()!=boolexp_e && !$1->getAndGate()){
             expr *temp = new expr(constbool_e);
             temp->setboolConst(true);
             emit(if_eq,$1,temp,NULL ,0, yylineno);
@@ -320,7 +297,21 @@ exp: assign_exp {$$=$1;}
             }
             $3 = nextQuad();
         }
-        
+        if($1->getAndGate()){
+            /* EMIT PART 1  */
+                expr *part1 = addemits();
+            /* EMIT PART 2  */
+                expr *part2 = addemits();
+            unsigned M = nextMquad();
+          
+            for(int i=0 ;i<part1->getTrueList().size() ; i++)
+                backpatch(M,part1->getTrueList().at(i));
+
+            $1->setTrueList(part2->getTrueList());
+            $1->setFalseList(merge(part1->getFalseList(),part2->getFalseList() ));
+
+        }
+
         if($4->getType()!=boolexp_e){
             expr *temp = new expr(constbool_e);
             temp->setboolConst(true);
@@ -337,35 +328,28 @@ exp: assign_exp {$$=$1;}
                 $4->insertFalseLabel(nextQuad()-1);
             }        
         }
-        /*cout << "\n\nM value: " << $3 ; 
-        cout << "\nOR E1 TRUE LIST:" << "\t" ;
-	    for(unsigned i=0 ; i<$1->getTrueList().size() ; i++ )
-            cout <<  $1->getTrueList().at(i);
-        cout << "\nOR E2 TRUE LIST:" << "\t" ;
-	    for(unsigned i=0 ; i<$4->getTrueList().size() ; i++ )
-            cout <<  $4->getTrueList().at(i);
-	    
-        cout << "\nOR E1 FALSE LIST:" << "\t" ;
-	    for(unsigned i=0 ; i<$1->getFalseList().size() ; i++ )
-            cout <<  $1->getFalseList().at(i);
-        cout << "\nOR E2 FALSE LIST:" << "\t" ;
-	    for(unsigned i=0 ; i<$4->getFalseList().size() ; i++ )
-            cout <<  $4->getFalseList().at(i);*/
 
-        $$ = new expr(boolexp_e);
-        $$->insertSymbol(newtemp());
+        if($4->getAndGate()){
+            /* EMIT PART 1  */
+                expr *part1 = addemits();
+            /* EMIT PART 2  */
+                expr *part2 = addemits();
+
+            unsigned M = nextMquad();
+            for(int i=0 ;i<part1->getTrueList().size() ; i++)
+                backpatch(M,part1->getTrueList().at(i));
+
+            $4->setTrueList(part2->getTrueList());
+            $4->setFalseList(merge(part1->getFalseList(),part2->getFalseList() ));
+
+        }
+
         for(int i=0 ;i<$1->getFalseList().size() ; i++)
             backpatch($3,$1->getFalseList().at(i));
         
         $$->setTrueList(merge($1->getTrueList(),$4->getTrueList()));
         $$->setFalseList($4->getFalseList());
-        
-        /*cout << "\nOR E TRUE LIST:" << "\t" ;
-	    for(unsigned i=0 ; i<$$->getTrueList().size() ; i++ )
-            cout <<  $$->getTrueList().at(i) << " ";
-        cout << "\nOR E FALSE LIST:" << "\t" ;
-	    for(unsigned i=0 ; i<$$->getFalseList().size() ; i++ )
-            cout <<  $$->getFalseList().at(i) << " \n";*/
+
     }
     | exp EQUAL exp{
         $$ = new expr(boolexp_e);
@@ -402,13 +386,6 @@ term: L_PARENTHESIS exp R_PARENTHESIS {$$=$2;}
         $$->setTrueList($2->getFalseList());
         $$->setFalseList(templist);
         $$->setNotGate(true);
-
-        cout << "\nnot E TRUE LIST" << "\t" ;
-	    for(unsigned i=0 ; i<$$->getTrueList().size() ; i++ )
-            cout <<  $$->getTrueList().at(i) << " ";
-        cout << "\nnot E FALSE LIST" << "\t" ;
-	    for(unsigned i=0 ; i<$$->getFalseList().size() ; i++ )
-            cout <<  $$->getFalseList().at(i) << " ";
     }
     | PLUS_PLUS lvalue {
         Symbol *symbol=table.Lookup($2->getSymbol()->getName());
@@ -511,6 +488,21 @@ assign_exp: lvalue ASSIGN exp {
         if(isMember) isMember=false;
         
         if($3->getType()==boolexp_e){
+            while(!exprquads.empty()){
+                /* EMIT PART 1  */
+                expr *part1 = addemits();
+                /* EMIT PART 2  */
+                expr *part2 = addemits();
+                unsigned M = nextMquad();
+                for(int i=0 ;i<part1->getTrueList().size() ; i++)
+                    backpatch(M-2,part1->getTrueList().at(i)-2);
+
+                
+                //$3->setTrueList(part2->getTrueList());
+                //$3->setFalseList(merge(part1->getFalseList(),part2->getFalseList() ));
+
+            }
+
             expr *temp=new expr(constbool_e);
             temp->setboolConst(false);
         
@@ -528,6 +520,7 @@ assign_exp: lvalue ASSIGN exp {
             temp=new expr(constbool_e);
             temp->setboolConst(true);
             emit(assign,temp,NULL,$3,0,yylineno); 
+            resetTempQuad();        
         }
 
         if($1->getType()==tableitem_e){
@@ -543,8 +536,8 @@ assign_exp: lvalue ASSIGN exp {
 };
 
 primary: lvalue { $$ = emit_iftableitem($1);}
-        | call 
-        | obj_def 
+        | call {$$=$1;}
+        | obj_def {$$=$1;}
         | L_PARENTHESIS f_def R_PARENTHESIS {
             $$ = new expr(programfunc_e);
             $$->insertSymbol($2);
@@ -673,7 +666,7 @@ indexed: index_el {$$ = new indexedlist(); $$->insertElements($1);}
 
 index_el: L_BRACE exp COLON exp R_BRACE {$$=new indexedelements($2,$4);};
 
-block: L_BRACE {scope++;} stmts   R_BRACE {table.Hide(scope); scope--; $$ = $3;};
+block: L_BRACE {scope++;} stmts   R_BRACE {table.Hide(scope); scope--;$$=$3; };
 
 funcblockstart: {LoopCounterStack.push(loopcounter); loopcounter=0; };
 
@@ -789,14 +782,14 @@ idlist: ID {
     | ;
 
 if_stmt: if_prefix stmt {
-        cout << "IFPREFIX ONLY: " << $1 << endl;
         patchlabel($1-2, $1+1);
         patchlabel($1-1, nextQuad()+1);
     }
     | if_prefix stmt else_prefix stmt {
         patchlabel($1-2,$3-1); //if eq if_prefix
         patchlabel($1-1,$3+2); //jmp if_prefix
-        patchlabel($3, nextQuad()+1); // jmp to end     
+        patchlabel($3, nextQuad()+1); // jmp to end   
+          
 } ;
 
 if_prefix: IF L_PARENTHESIS exp R_PARENTHESIS{
@@ -825,6 +818,12 @@ if_prefix: IF L_PARENTHESIS exp R_PARENTHESIS{
         emit(if_eq, $3, temp, NULL, 0, yylineno);
         emit(jump,NULL,NULL,NULL,0,yylineno);
     }
+    else{
+        temp=new expr(constbool_e);
+        temp->setboolConst(true);
+        emit(if_eq, $3, temp, NULL, 0, yylineno);
+        emit(jump,NULL,NULL,NULL,0,yylineno);
+    }
 
     $$ = nextQuad();
 
@@ -844,13 +843,13 @@ loopstmt : loopstart stmt loopend { $$ = $2; } ;
 
 while_stmt: whilestart whilecond loopstmt{
     emit(jump,NULL,NULL,NULL,$1,yylineno); 
-    patchlabel($2, nextQuad()); 
-    patchlabelBC($$->getBreakList(), nextQuad()); 
-    patchlabelBC($$->getContList(), $1);
+    patchlabel($2, nextQuad()+1); 
+    //patchlabelBC($3->getBreakList(), nextQuad()+1); 
+    //patchlabelBC($3->getContList(), $1);
 } ;
 
 
-whilestart: WHILE {$$=nextQuad();};
+whilestart: WHILE {$$=nextQuad()+1;};
 
 whilecond: L_PARENTHESIS exp R_PARENTHESIS  {
     expr *temp = new expr(constbool_e);
@@ -876,7 +875,7 @@ whilecond: L_PARENTHESIS exp R_PARENTHESIS  {
         emit(assign,temp,NULL,$2,0,yylineno); 
     }
     
-    emit(if_eq, $2, temp, NULL, nextQuad()+2,yylineno); 
+    emit(if_eq, $2, temp, NULL, nextQuad()+3,yylineno); 
     $$ = nextQuad();
     emit(jump,NULL,NULL,NULL,0,yylineno);
 };
@@ -916,9 +915,9 @@ for_stmt: for_prefix N elist R_PARENTHESIS N loopstmt N{
     patchlabel($1->getEnter(),$5+2); // true jump
     patchlabel($2,nextQuad()+1); // false jump
     patchlabel($5,$1->getTest()+1); // loop jump
-    patchlabel($7,$2+3); // closure jump
+    patchlabel($7,$2+2); // closure jump
     
-    //patchlabelBC($$->getBreakList(),nextQuad());  //false jump
+    //patchlabelBC($$->getBreakList(),nextQuad()+1);  //false jump
     //patchlabelBC($$->getContList(),$2+1);  //closure jump
 } ;
 
@@ -953,7 +952,7 @@ int main(int argc, char **argv) {
     yyparse();
     cout << "-----------------------------------------------------------------------" << endl;
 
-  //table.printSymbols();
+  table.printSymbols();
   print_quads();
 
 
