@@ -12,13 +12,6 @@ Iasonas Ntagiannis 3540
 ```
 ---------------------------------
 ```
---- Rules ---
-1)Gamo to skoupidi ton Savvidi
-2)Gia kathe update enimeronoume stin omada sto iMessage.
-3)No code from other projects or internet (tha tin pioume).
-```
----------------------------------
-```
 --- Phase 1: Lexical Analysis ---
 1)Gia compile: make 
 2)Gia run: ./lexical_analyzer <test_file_name>.txt
