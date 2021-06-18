@@ -140,6 +140,12 @@ typedef class instruction{
         void  setArg2(vmarg *arg2){this->arg2=arg2;}
     instruction(){
     }
+    instruction(vmopcode opcode,vmarg *result,vmarg *arg1,vmarg *arg2){
+        this->opcode=opcode;
+        this->result=result;
+        this->arg1=arg1;
+        this->arg2=arg2;
+    }
     
 }instruction;
 
@@ -180,7 +186,7 @@ unsigned consts_newstring(std::string s);
 unsigned consts_newnumber(double n);
 unsigned libfuncs_newused(std::string s);
 
-void make_operand(expr *e,vmarg *arg);
+vmarg *make_operand(expr *e,vmarg *arg);
 void patch_incoplete_jumps();
 
 void emit_instruction(instruction t);
@@ -191,6 +197,7 @@ void generate_SUB(quad q);
 void generate_MUL(quad q);
 void generate_DIV(quad q);
 void generate_MOD(quad q);
+void generate_UMINUS(quad q);
 void generate_NEWTABLE(quad q);
 void generate_TABLEGETELEM(quad q);
 void generate_TABLESETELEM(quad q);
@@ -221,33 +228,37 @@ void generate_FUNCEND(quad q);
 typedef void (*generator_func_t)(quad);
 
 generator_func_t generators[] = {
+    generate_ASSIGN,
     generate_ADD, 
     generate_SUB,
     generate_MUL,
     generate_DIV,
     generate_MOD,
+    generate_UMINUS,
+    generate_AND,
+    generate_OR,
+    generate_NOT,
+    generate_IF_EQ,
+    generate_IF_NOTEQ,
+    generate_IF_LESSEQ,
+    generate_IF_GREATEREQ,
+    generate_IF_LESS,
+    generate_IF_GREATER,
+    generate_CALL,
+    generate_PARAM,
+    generate_RETURN,
+    generate_GETRETVAL,
+    generate_FUNCSTART,
+    generate_FUNCEND,
     generate_NEWTABLE,
     generate_TABLEGETELEM,
     generate_TABLESETELEM,
-    generate_ASSIGN,
-    generate_NOP,
     generate_JUMP,
-    generate_IF_EQ,
-    generate_IF_NOTEQ,
-    generate_IF_GREATER,
-    generate_IF_GREATEREQ,
-    generate_IF_LESS,
-    generate_IF_LESSEQ,
-    generate_NOT,
-    generate_OR,
-    generate_AND,
-    generate_PARAM,
-    generate_CALL,
-    generate_GETRETVAL,
-    generate_FUNCSTART,
-    generate_RETURN,
-    generate_FUNCEND
+    generate_NOP,
 };
+void generates(void);
+void backpatchRet(unsigned label);
+
 
 void magicnumber();
 void strings();
@@ -256,6 +267,62 @@ void libfunctions();
 void arrays();
 void instruc(int i);
 void code();
-void binaryfile();
+void binaryf();
 std::string vm_iopcode_to_string(vmopcode op);
 std::string vm_vmarg_t_to_string(vmarg_t type);
+
+void execute_assign(instruction t); 
+void execute_add(instruction t);
+void execute_sub(instruction t);
+void execute_mul(instruction t);
+void execute_div(instruction t); 
+void execute_mod(instruction t);
+void execute_uminus(instruction t);  
+void execute_and(instruction t);
+void execute_or(instruction t);
+void execute_not(instruction t);
+void execute_jeq(instruction t);
+void execute_jne(instruction t);
+void execute_jle(instruction t);
+void execute_jge(instruction t);
+void execute_jlt(instruction t);
+void execute_jgt(instruction t); 
+void execute_call(instruction t);
+void execute_pusharg(instruction t);
+void execute_funcenter(instruction t); 
+void execute_funcexit(instruction t);  
+void execute_newtable(instruction t);
+void execute_tablegetelem(instruction t); 
+void execute_tablesetelem(instruction t);
+void execute_nop(instruction t);
+void execute_jump(instruction t);
+
+typedef void (*execute_func_t)(instruction t);
+
+execute_func_t executeFuncs[]{
+    execute_assign,   
+    execute_add,  
+    execute_sub,
+    execute_mul,  
+    execute_div,  
+    execute_mod,
+    execute_uminus,   
+    execute_and,  
+    execute_or,
+    execute_not,  
+    execute_jeq,  
+    execute_jne,
+    execute_jle,  
+    execute_jge,  
+    execute_jlt,
+    execute_jgt,  
+    execute_call, 
+    execute_pusharg,
+    execute_funcenter,  
+    execute_funcexit,   
+    execute_newtable,
+    execute_tablegetelem, 
+    execute_tablesetelem, 
+    execute_nop, 
+    execute_jump
+};

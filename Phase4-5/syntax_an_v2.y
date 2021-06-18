@@ -273,7 +273,6 @@ exp: assign_exp {$$=$1;}
         if($1->getType()==boolexp_e && $4->getType()==boolexp_e){
             //for(int i=0 ;i<$1->getTrueList().size() ; i++)
                 backpatch($3+nextQuad(),$1->getTrueList().at(0));
-            cout << "HELLO EVERYNYAN " << nextQuad() << "       " << $3 <<"      " <<$1->getTrueList().at(0) << endl; ;
             $$->setTrueList($4->getTrueList());
             $$->setFalseList(merge($1->getFalseList(),$4->getFalseList() ));
         }
@@ -297,8 +296,6 @@ exp: assign_exp {$$=$1;}
                 $1->insertFalseLabel(nextQuad()-2);
             }
             else{
-                cout << "OR E1 TRUELIST "<< nextQuad()-2 <<endl;
-                cout << "OR E1 FALSELIST "<< nextQuad()-1 <<endl;
                 $1->insertTrueLabel(nextQuad()-2);
                 $1->insertFalseLabel(nextQuad()-1);
             }
@@ -1003,21 +1000,7 @@ int yyerror(const char* yaccProvidedMessage){
   return 0;
 }
 
-int main(int argc, char **argv) { 
-    if(argc>1){
-        if(!(yyin = fopen(argv[1],"r"))){
-        fprintf(stderr, "Cannot read file %s\n",argv[1]);
-        return 1;
-        }
-    }
-    else yyin = stdin;    
-    cout << "\n--------------------------- Errors/Warnings ---------------------------" << endl;
+void parser(){
     yyparse();
-    cout << "-----------------------------------------------------------------------" << endl;
-
-  //table.printSymbols();
-  print_quads();
-
-
-  return 0; 
 }
+

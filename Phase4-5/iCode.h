@@ -3,6 +3,9 @@
 	 Stylianos Michelakakis AM:3524
 	 Iasonas Filippos Ntagiannis AM:3540 
      Compiled and run in Mac OS Big Sur 11.4 , x86 chip ***/
+#ifndef _ICODE_H_
+#define _ICODE_H_
+
 #include "SymbolTable_v2.h"
 #include <vector>
 #include <list>
@@ -269,3 +272,4 @@ bool istempname(char* s);
 bool istempexpr(expr *e);
 /************************************************/
 
+#endif

@@ -96,4 +96,6 @@ typedef class SymbolTable {
     }
 }SymbolTable;
 
+void parser();
+
 #endif

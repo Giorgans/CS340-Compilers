@@ -3,10 +3,13 @@
 	 Stylianos Michelakakis AM:3524
 	 Iasonas Filippos Ntagiannis AM:3540 
      Compiled and run in Mac OS Big Sur 11.4 , x86 chip ***/
-
-#include "avm.h"
 #include <stack>
 #include <fstream>
+#include "avm.h"
+#include "parser.h"
+
+extern FILE *yyin;
+extern SymbolTable table;
 
 std::vector <double> numConsts;
 std::vector <std::string> stirngConsts;
@@ -18,7 +21,8 @@ unsigned instructionslabel=0;
 extern std::vector <quad> quads;
 std::vector <instruction> instructions;
 std::vector <incomplete_jump> inc_jumps;
-std::vector <userfunc> funcstack;
+std::stack <userfunc> funcstack;
+std::vector <unsigned> returnlist;
 
 unsigned nextinstructionlabel(){
     return instructionslabel;
@@ -29,64 +33,63 @@ unsigned consts_newstring(std::string s){
         if (stirngConsts.at(i) == s) return i;
     
     stirngConsts.push_back(s);
-    return stirngConsts.size();
+    return stirngConsts.size()-1;
 }
 unsigned consts_newnumber(double n){
     for (unsigned i = 0 ; i < numConsts.size() ; i++)
         if (numConsts.at(i) == n) return i;
 
     numConsts.push_back(n);
-    return numConsts.size();
+    return numConsts.size()-1;
 }
 unsigned libfuncs_newused(std::string s){
     for (unsigned i = 0; i < namedLibfuncs.size() ; i++)
         if (namedLibfuncs.at(i) == s) return i;
     
     namedLibfuncs.push_back(s);
-    return namedLibfuncs.size();
+    return namedLibfuncs.size()-1;
 }
 
 
-void make_operand(expr *e,vmarg *arg){
+vmarg *make_operand(expr *e){
+    if(e==NULL) return NULL;
     switch (e->getType())
     {
-    case var_e:
-    case tableitem_e:
-    case arithexp_e:
-    case boolexp_e:
-    case newtable_e:{
-        vmarg_t temptype;
-        switch (e->getSymbol()->getSpace())
-        {
-            case programvar:    temptype=global_a; break;
-            case functionlocal:    temptype=local_a; break;
-            case formalarg:    temptype=formal_a; break;        
-            default:    assert(0);
-        }
-        arg = new vmarg(temptype,e->getSymbol()->getOffset());
-    }
-    /*Constants*/
-    case constbool_e:{
-        arg = new vmarg(bool_a,e->getboolConst()); break;
-    }
-    case conststring_e:{
-        arg = new vmarg(string_a,consts_newstring(e->getstrConst())); break;
-    }
-    case costnum_e:{
-        arg = new vmarg(string_a,consts_newnumber(e->getnumconst())); break;
-    }
-    case nil_e:{
-        arg = new vmarg(nil_a,0); break;
-    }
-    /*Functions*/
-    case programfunc_e:{
-        arg = new vmarg(userfunc_a,e->getSymbol()->getOffset()); break;
-    }
-    case libraryfunc_e:{
-        arg = new vmarg(libfunc_a,libfuncs_newused(e->getSymbol()->getName())); break;
-    }
+        case var_e:
+        case tableitem_e:
+        case arithexp_e:
+        case boolexp_e:
+        case newtable_e:{
+            if(e->getSymbol()->getSpace()==programvar) 
+                return new vmarg(global_a,e->getSymbol()->getOffset());
+            if(e->getSymbol()->getSpace()==functionlocal) 
+                return new vmarg(local_a,e->getSymbol()->getOffset());
+            if(e->getSymbol()->getSpace()==formalarg) 
+                return new vmarg(formal_a,e->getSymbol()->getOffset());
 
-    default: assert(0);
+        }
+        /*Constants*/
+        case constbool_e:{
+            return new vmarg(bool_a,e->getboolConst()); break;
+        }
+        case conststring_e:{
+            return new vmarg(string_a,consts_newstring(e->getstrConst())); break;
+        }
+        case costnum_e:{
+            return new vmarg(number_a,consts_newnumber(e->getnumconst())); break;
+        }
+        case nil_e:{
+            return new vmarg(nil_a,0); break;
+        }
+        /*Functions*/
+        case programfunc_e:{
+            return new vmarg(userfunc_a,e->getSymbol()->getOffset()); break;
+        }
+        case libraryfunc_e:{
+            return new vmarg(libfunc_a,libfuncs_newused(e->getSymbol()->getName())); break;
+        }
+
+        default: return NULL;
     }
 }
  
@@ -105,34 +108,27 @@ void emit_instruction(instruction t){
 
 
 void generate(vmopcode op,quad q){
-    instruction  t;
-    t.setOpcode(op);
-    make_operand(q.getArg1(),t.getArg1());
-    make_operand(q.getArg2(),t.getArg2());
-    make_operand(q.getResult(),t.getResult());
     q.setTaddress(nextinstructionlabel());
-    emit_instruction(t);
+
+    emit_instruction(instruction(op,make_operand(q.getResult()),make_operand(q.getArg1()),make_operand(q.getArg2())));
+   std::cout << "DEBUGING TIME" << std::endl;
 }
 
 void generate_relational(vmopcode op,quad q){
-    instruction  t;
-    t.setOpcode(op);
-    make_operand(q.getArg1(),t.getArg1());
-    make_operand(q.getArg2(),t.getArg2());
-    t.getResult()->setType(label_a);
 
     if(q.getLabel() <  instructions.size())
-        t.getResult()->setVal(quads[q.getLabel()].getTaddress());
+        emit_instruction(instruction(op,new vmarg(label_a,quads[q.getLabel()].getTaddress()),make_operand(q.getArg1()),make_operand(q.getArg2())));
     else    
         inc_jumps.push_back(incomplete_jump(nextinstructionlabel(),q.getLabel()));
 
     q.setTaddress(nextinstructionlabel());
-    emit_instruction(t);
+
 }
 
 void generate_ADD(quad q){ generate(add_v,q); }
 void generate_SUB(quad q){ generate(sub_v,q); }
 void generate_MUL(quad q){ generate(mul_v,q); }
+void generate_UMINUS(quad q){ generate(mul_v,q); }
 void generate_DIV(quad q){ generate(div_v,q); }
 void generate_MOD(quad q){ generate(mod_v,q); }
 
@@ -152,166 +148,100 @@ void generate_IF_LESSEQ(quad q){ generate_relational(jle_v,q); }
 
 void generate_NOT(quad q){
     q.setTaddress(nextinstructionlabel());
-    instruction  t;
     
-    t.setOpcode(jeq_v);
-    make_operand(q.getArg1(),t.getArg1());
-    t.setArg2(new vmarg(bool_a,false));
-    t.setResult(new vmarg(label_a,nextinstructionlabel()+3));
-    emit_instruction(t);
+    emit_instruction(instruction(jeq_v,new vmarg(label_a,nextinstructionlabel()+3),make_operand(q.getArg1()),new vmarg(bool_a,false)));
 
-    t.setOpcode(assign_v);
-    t.setArg1(new vmarg(bool_a,false));
-    t.setArg2(NULL);//reset_operad(&t.getArg2()); 
-    make_operand(q.getResult(),t.getResult());
-    emit_instruction(t);
- 
-    t.setOpcode(jump_v);
-    t.setArg1(NULL);//reset_operad(&t.getArg1()); 
-    t.setArg2(NULL);//reset_operad(&t.getArg2()); 
-    t.setResult(new vmarg(label_a,nextinstructionlabel()+2));
-    emit_instruction(t);
+    emit_instruction(instruction(assign_v,make_operand(q.getResult()),new vmarg(bool_a,false),NULL));
 
-    t.setOpcode(assign_v);
-    t.setArg1(new vmarg(bool_a,true));
-    t.setArg2(NULL);//reset_operad(&t.getArg2()); 
-    make_operand(q.getResult(),t.getResult());
-    emit_instruction(t);
+    emit_instruction(instruction(jump_v,new vmarg(label_a,nextinstructionlabel()+2),NULL,NULL));
+
+    emit_instruction(instruction(assign_v,make_operand(q.getResult()),new vmarg(bool_a,true),NULL));
 }
 
 void generate_OR(quad q){
     q.setTaddress(nextinstructionlabel());
-    instruction  t;
-    
-    t.setOpcode(jeq_v);
-    make_operand(q.getArg1(),t.getArg1());
-    t.setArg2(new vmarg(bool_a,true));
-    t.setResult(new vmarg(label_a,nextinstructionlabel()+4));
-    emit_instruction(t);
 
+    emit_instruction(instruction(jeq_v,new vmarg(label_a,nextinstructionlabel()+4),make_operand(q.getArg1()),new vmarg(bool_a,true)));
 
-    make_operand(q.getArg2(),t.getArg1());
-    t.getResult()->setVal(nextinstructionlabel()+3);
-    emit_instruction(t);
-
-
-    t.setOpcode(assign_v);
-    t.setArg1(new vmarg(bool_a,false));
-    t.setArg2(NULL);//reset_operad(&t.getArg2()); 
-    make_operand(q.getResult(),t.getResult());
-    emit_instruction(t);
+    emit_instruction(instruction(assign_v,make_operand(q.getResult()),new vmarg(bool_a,false),NULL));
  
-    t.setOpcode(jump_v);
-    t.setArg1(NULL);//reset_operad(&t.getArg1()); 
-    t.setArg2(NULL);//reset_operad(&t.getArg2()); 
-    t.setResult(new vmarg(label_a,nextinstructionlabel()+2));
-    emit_instruction(t);
+    emit_instruction(instruction(jump_v,new vmarg(label_a,nextinstructionlabel()+2),NULL,NULL));
 
-    t.setOpcode(assign_v);
-    t.setArg1(new vmarg(bool_a,true));
-    t.setArg2(NULL);//reset_operad(&t.getArg2()); 
-    make_operand(q.getResult(),t.getResult());
-    emit_instruction(t);
+    emit_instruction(instruction(assign_v,make_operand(q.getResult()),new vmarg(bool_a,true),NULL));
+
 }
 
 void generate_AND(quad q){
     q.setTaddress(nextinstructionlabel());
-    instruction  t;
-    
-    t.setOpcode(jeq_v);
-    make_operand(q.getArg1(),t.getArg1());
-    t.setArg2(new vmarg(bool_a,true));
-    t.setResult(new vmarg(label_a,nextinstructionlabel()+4));
-    emit_instruction(t);
 
+    emit_instruction(instruction(jeq_v,new vmarg(label_a,nextinstructionlabel()+4),make_operand(q.getArg1()),new vmarg(bool_a,true)));
 
-    make_operand(q.getArg2(),t.getArg1());
-    t.getResult()->setVal(nextinstructionlabel()+3);
-    emit_instruction(t);
-
-
-    t.setOpcode(assign_v);
-    t.setArg1(new vmarg(bool_a,false));
-    t.setArg2(NULL);//reset_operad(&t.getArg2()); 
-    make_operand(q.getResult(),t.getResult());
-    emit_instruction(t);
+    emit_instruction(instruction(assign_v,make_operand(q.getResult()),new vmarg(bool_a,false),NULL));
  
-    t.setOpcode(jump_v);
-    t.setArg1(NULL);//reset_operad(&t.getArg1()); 
-    t.setArg2(NULL);//reset_operad(&t.getArg2()); 
-    t.setResult(new vmarg(label_a,nextinstructionlabel()+2));
-    emit_instruction(t);
+    emit_instruction(instruction(jump_v,new vmarg(label_a,nextinstructionlabel()+2),NULL,NULL));
 
-    t.setOpcode(assign_v);
-    t.setArg1(new vmarg(bool_a,true));
-    t.setArg2(NULL);//reset_operad(&t.getArg2()); 
-    make_operand(q.getResult(),t.getResult());
-    emit_instruction(t);
+    emit_instruction(instruction(assign_v,make_operand(q.getResult()),new vmarg(bool_a,true),NULL));
 }
 
 void generate_PARAM(quad q){
     q.setTaddress(nextinstructionlabel());
-    instruction  t;
-    t.setOpcode(pusharg_v);
-    make_operand(q.getArg1(),t.getArg1());
-    emit_instruction(t);
+
+    emit_instruction(instruction(pusharg_v,NULL,make_operand(q.getArg1()),NULL));
 }
 
 void generate_CALL(quad q){
     q.setTaddress(nextinstructionlabel());
-    instruction  t;
-    t.setOpcode(call_v);
-    make_operand(q.getArg1(),t.getArg1());
-    emit_instruction(t);
+
+    emit_instruction(instruction(call_v,NULL,make_operand(q.getArg1()),NULL));
 }
 
 void generate_GETRETVAL(quad q){
     q.setTaddress(nextinstructionlabel());
-    instruction  t;
-    t.setOpcode(assign_v);
-    make_operand(q.getArg1(),t.getArg1());
-    emit_instruction(t);
+
+    emit_instruction(instruction(assign_v,NULL,make_operand(q.getArg1()),NULL));
 }
 
 void generate_FUNCSTART(quad q){
     q.setTaddress(nextinstructionlabel());
-    funcstack.insert(funcstack.begin(), userfunc(nextinstructionlabel(),q.getResult()->getSymbol()->getTotalLocals(),q.getResult()->getSymbol()->getName()));
+    funcstack.push(userfunc(nextinstructionlabel(),q.getResult()->getSymbol()->getTotalLocals(),q.getResult()->getSymbol()->getName()));
 
-    instruction t;
-    t.setOpcode(funcenter_v);
-    make_operand(q.getResult(),t.getResult());
-    emit_instruction(t);
+    emit_instruction(instruction(funcenter_v,make_operand(q.getResult()),NULL,NULL));
 }
 
 void generate_RETURN(quad q){
     q.setTaddress(nextinstructionlabel());
-    instruction t;
-    t.setOpcode(assign_v);
-    t.setResult(new vmarg(retval_a,0));
-    make_operand(q.getArg1(),t.getArg1());
-    emit_instruction(t);
 
+    emit_instruction(instruction(assign_v,new vmarg(retval_a,0),make_operand(q.getArg1()),NULL));
 
-    userfunc f = funcstack.at(0);
-    //append()
-    t.setOpcode(jump_v);
-    t.setArg1(NULL);//reset_operad(&t.getArg1()); 
-    t.setArg2(NULL);//reset_operad(&t.getArg2()); 
-    t.setResult(new vmarg(label_a,0));
-    emit_instruction(t);
+    userfunc f = funcstack.top();
+    
+    returnlist.push_back(nextinstructionlabel()); //append
 
+    emit_instruction(instruction(assign_v,new vmarg(label_a,0),NULL,NULL));
 }
 
 void generate_FUNCEND(quad q){
+    q.setTaddress(nextinstructionlabel());
+    
+    funcstack.pop();
+    
+    backpatchRet(nextinstructionlabel());
 
+    emit_instruction(instruction(funcexit_v,make_operand(q.getResult()),NULL,NULL));
+}
+
+void backpatchRet(unsigned label){
+    for (int i = 0 ; i < returnlist.size() ; i++ )
+        instructions[returnlist.at(i)].setResult(new vmarg(label_a,label));
 }
 
 
 
-void generate(void){
-    for(instructionslabel = 0 ; instructionslabel < quads.size() ; instructionslabel++ )
+void generates(void){
+    for(instructionslabel = 0 ; instructionslabel < quads.size() ; instructionslabel++ ){
+        std::cout << "INNSTRLB " << instructionslabel << "\t" << iopcode_to_string(quads.at(instructionslabel).getOp()) << std::endl;
         (*generators[quads.at(instructionslabel).getOp()])(quads.at(instructionslabel));
-
+    }
     patch_incoplete_jumps();
 }   
 
@@ -321,32 +251,34 @@ std::ofstream binary("binary.abc");
 
 
 void magicnumber(){
-    binary << "\n magic number " << 777 << std::endl;
+    binary << "\n magic number: " << 777 << std::endl;
 }
 
 void strings(){
-    if(!stirngConsts.size()){
-        binary << "\n strings \n" << std::endl;
+    if(stirngConsts.size()){
+        binary << "\n strings: \n" << std::endl;
         for(unsigned i = 0 ; i < stirngConsts.size() ; i++)
             binary << stirngConsts.at(i) << "\t" ; 
     }
+    binary << std::endl;
 }
 
 void numbers(){
-    if(!numConsts.size()){
+    if(numConsts.size()){
         binary << "\n numbers: \n" << std::endl;
         for(unsigned i = 0 ; i < numConsts.size() ; i++)
             binary << numConsts.at(i) << "\t" ; 
     }
+    binary << std::endl;
 }
 
 void libfunctions(){
-    if(!namedLibfuncs.size()){
+    if(namedLibfuncs.size()){
         binary << "\n lib functions: \n" << std::endl;
         for(unsigned i = 0 ; i < namedLibfuncs.size() ; i++)
             binary << namedLibfuncs.at(i) << "\t" ; 
     }
-
+    binary << std::endl;
 }
 void arrays(){
     strings();
@@ -355,26 +287,24 @@ void arrays(){
 }
 
 void instruc(int i){
-        binary <<  vm_iopcode_to_string(instructions.at(i).getOpcode()) << "\t";
-        if(!instructions.at(i).getResult())
-            binary << instructions.at(i).getResult()->getType() << vm_vmarg_t_to_string(instructions.at(i).getResult()->getType());
-        
-        if(!instructions.at(i).getArg1())
-            binary << instructions.at(i).getArg1()->getType() <<  vm_vmarg_t_to_string(instructions.at(i).getArg1()->getType());
-        
-        if(!instructions.at(i).getArg2())
-            binary << instructions.at(i).getArg2()->getType() <<  vm_vmarg_t_to_string(instructions.at(i).getArg2()->getType());
-    
+    binary <<  vm_iopcode_to_string(instructions.at(i).getOpcode()) << "\t\t";
+    if(instructions.at(i).getResult()!=NULL)
+        binary << instructions.at(i).getResult()->getType() << vm_vmarg_t_to_string(instructions.at(i).getResult()->getType()) << " , " << instructions.at(i).getResult()->getVal() << "\t";
+    if(instructions.at(i).getArg1()!=NULL)
+        binary << instructions.at(i).getArg1()->getType() <<  vm_vmarg_t_to_string(instructions.at(i).getArg1()->getType()) << " , " << instructions.at(i).getArg1()->getVal()  << "\t";
+    if(instructions.at(i).getArg2()!=NULL)
+        binary << instructions.at(i).getArg2()->getType() <<  vm_vmarg_t_to_string(instructions.at(i).getArg2()->getType())<< " , " << instructions.at(i).getArg2()->getVal() << "\t";
+    binary << std::endl;
 }
 
 void code(){
-    binary << "\nopcode\tresult\targ1\targ2\n";
+    binary << "\nopcode\t\tresult\t\targ1\t\targ2\n";
     for (int i = 0 ; i < instructions.size() ; i++)
         instruc(i);
 }
 
 
-void binaryfile(){
+void binaryf(){
     magicnumber();
     arrays();
     code();
@@ -428,3 +358,73 @@ std::string vm_vmarg_t_to_string(vmarg_t type){
         default: return "";
     }
 }
+
+/************ VM ************/
+
+avm_memcell *avm_translate_operand(vmarg *arg){
+    if (arg==NULL) return NULL;
+
+    switch (arg->getType())
+    {
+    case global_a:
+    case local_a:
+    case formal_a:
+    case retval_a:
+    break;
+    
+    default:
+        break;
+    }
+}
+
+
+void execute_assign(instruction t){
+
+}
+void execute_add(instruction t){}
+void execute_sub(instruction t){}
+void execute_mul(instruction t){}
+void execute_div(instruction t){}
+void execute_mod(instruction t){}
+void execute_uminus(instruction t){}
+void execute_and(instruction t){}
+void execute_or(instruction t){}
+void execute_not(instruction t){}
+void execute_jeq(instruction t){}
+void execute_jne(instruction t){}
+void execute_jle(instruction t){}
+void execute_jge(instruction t){}
+void execute_jlt(instruction t){}
+void execute_jgt(instruction t){}
+void execute_call(instruction t){}
+void execute_pusharg(instruction t){}
+void execute_funcenter(instruction t){}
+void execute_funcexit(instruction t){}
+void execute_newtable(instruction t){}
+void execute_tablegetelem(instruction t){}
+void execute_tablesetelem(instruction t){}
+void execute_nop(instruction t){}
+void execute_jump(instruction t){}
+
+
+int main(int argc, char **argv) { 
+    if(argc>1){
+        if(!(yyin = fopen(argv[1],"r"))){
+        fprintf(stderr, "Cannot read file %s\n",argv[1]);
+        return 1;
+        }
+    }
+    else yyin = stdin;    
+    std::cout << "\n--------------------------- Errors/Warnings ---------------------------" << std::endl;
+    parser();
+    std::cout << "-----------------------------------------------------------------------" << std::endl;
+    table.printSymbols();
+    print_quads();
+    generates();
+    std::cout << "DEBUGING TIME" << std::endl;
+    binaryf();
+
+    return 0; 
+}
+
+//  std::cout << "DEBUGING TIME" << std::endl;
